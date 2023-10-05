@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torch.linalg import pinv
 
 class OSELM(nn.Module):
     
@@ -26,7 +27,7 @@ class OSELM(nn.Module):
         H = self.__activation_func(torch.matmul(input_matrix, self.__alpha) + self.__bias)
         H_T = torch.transpose(H, 0, 1)
         T = torch.transpose(target_matrix, 0, 1)
-        self.__p = torch.inverse(torch.matmul(H_T, H))
+        self.__p = pinv(torch.matmul(H_T, H))
         self.__beta = torch.matmul(torch.matmul(self.__p, H_T), T)
         return self.__beta
 
@@ -46,7 +47,7 @@ class OSELM(nn.Module):
         chunk_size = input_chunk.shape[0]
         PH_T = torch.matmul(self.__p, H_T)
         I = torch.eye(chunk_size)
-        HPH_T_Inv = torch.inverse(torch.matmul(H, torch.matmul(self.__p, H_T)) + I)
+        HPH_T_Inv = pinv(torch.matmul(H, torch.matmul(self.__p, H_T)) + I)
         HP = torch.matmul(H, self.__p)
         self.__p -= torch.matmul(torch.matmul(PH_T, HPH_T_Inv), HP)
 
