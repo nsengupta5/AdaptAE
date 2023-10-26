@@ -1,5 +1,3 @@
-import torch
-from torch.nn import MSELoss
 from oselm import OSELM
 from torchvision import datasets, transforms
 from torch.backends import mps
@@ -22,41 +20,44 @@ device = (
 
 def oselm_init():
     activation_func = 'sigmoid'
+    loss_func = 'mse'
     n_hidden_nodes = 128
     n_input_nodes = 784
-    return OSELM(n_input_nodes, n_hidden_nodes, activation_func).to(device)
+    return OSELM(activation_func, loss_func, n_input_nodes, n_hidden_nodes).to(device)
 
 # Data Loading and Splitting
 def load_and_split_data():
     transform = transforms.ToTensor()
     mnist_data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
-    # TODO Check max between train_size and n_hidden_nodes
-    # train_size *must* be greater than n_hidden_nodes
     train_size = int(0.6 * len(mnist_data))
     seq_size = int(0.2 * len(mnist_data))
     test_size = len(mnist_data) - train_size - seq_size
     train_data, seq_data, test_data = random_split(mnist_data, [train_size, seq_size, test_size])
     return train_data, seq_data, test_data
 
-# Data Loaders
-def create_data_loaders(train_data, seq_data, test_data):
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size = BATCH_SIZE, shuffle = True)
-    seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = BATCH_SIZE, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size = BATCH_SIZE, shuffle = True)
-    return train_loader, seq_loader, test_loader
+def train_model(model, train_data, seq_data, mode):
+    data = train_data.dataset.data.view(-1, 784).float().to(device)
+    model.init_phase(data)
 
-def train_model(model, data_loader, mode="sample"):
-    model.train()
-    criterion = MSELoss()
-    total_loss = 0
+    if mode == "sample":
+        for i in range(len(seq_data.dataset)):
+            image, _ = seq_data.dataset[i]
+            sample = image.view(-1, 784).float().to(device)
+            model.seq_phase(sample, mode)
+    else:
+        for i in range(0, len(seq_data.dataset), BATCH_SIZE):
+            images, _ = seq_data.dataset[0][i:i+BATCH_SIZE]
+            batch = images.view(-1, 784).float().to(device)
+            model.seq_phase(batch, mode)
 
 def main():
     train_data, seq_data, test_data = load_and_split_data()
-    train_loader, seq_loader, test_loader = create_data_loaders(train_data, seq_data, test_data)
     model = oselm_init()
-
-    # Training
-    model.init_phase()
-
+    train_model(model, train_data, seq_data, mode = "sample")
+    pred = model.predict(test_data)
+    loss, accuracy = model.evaluate(test_data, pred)
+    print("Loss: ", loss)
+    print("Accuracy: ", accuracy)
+    
 if __name__ == "__main__":
     main()
