@@ -49,8 +49,7 @@ def train_model(model, train_data, seq_data, mode):
     logging.info(f"Sequential training on {len(seq_data.dataset)} samples...")
     if mode == "sample":
         with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
-            for i in range(20000):
-                image, _ = seq_data.dataset[i]
+            for (image, _) in seq_data.dataset:
                 sample = image.view(-1, 784).float().to(device)
                 model.seq_phase(sample, mode)
         print(prof.key_averages().table(sort_by="cuda_time_total"))

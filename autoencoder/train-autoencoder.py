@@ -34,7 +34,7 @@ def main():
     num_epochs = 3
     outputs = []
 
-    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
         for epoch in range(num_epochs):
             for (img, _) in data_loader:
                 img = img.reshape(-1, 28*28).to(device)
