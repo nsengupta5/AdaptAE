@@ -23,7 +23,9 @@ def load_data():
 
 def main():
     data_loader = load_data()
-    model = Autoencoder().to(device)
+    n_input_nodes = 784
+    n_hidden_nodes = 128
+    model = Autoencoder(n_input_nodes, n_hidden_nodes).to(device)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 

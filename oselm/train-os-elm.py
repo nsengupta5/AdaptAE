@@ -3,6 +3,7 @@ from torchvision import datasets, transforms
 from torch.backends import mps
 from torch import cuda
 from torch.utils.data import random_split
+import logging
 
 TRAIN_SIZE_PROP = 0.6
 SEQ_SIZE_PROP = 0.2
@@ -36,19 +37,24 @@ def load_and_split_data():
     return train_data, seq_data, test_data
 
 def train_model(model, train_data, seq_data, mode):
+    logging.basicConfig(level=logging.INFO)
     data = train_data.dataset.data.view(-1, 784).float().to(device)
+    logging.info(f"Initial training on {len(data)} samples...")
     model.init_phase(data)
+    logging.info(f"Initial training complete.")
 
-#     if mode == "sample":
-#         for i in range(len(seq_data.dataset)):
-#             image, _ = seq_data.dataset[i]
-#             sample = image.view(-1, 784).float().to(device)
-#             model.seq_phase(sample, mode)
-#     else:
-#         for i in range(0, len(seq_data.dataset), BATCH_SIZE):
-#             images, _ = seq_data.dataset[0][i:i+BATCH_SIZE]
-#             batch = images.view(-1, 784).float().to(device)
-#             model.seq_phase(batch, mode)
+    logging.info(f"Sequential training on {len(seq_data.dataset)} samples...")
+    if mode == "sample":
+        for i in range(len(seq_data.dataset)):
+            image, _ = seq_data.dataset[i]
+            sample = image.view(-1, 784).float().to(device)
+            model.seq_phase(sample, mode)
+    else:
+        for i in range(0, len(seq_data.dataset), BATCH_SIZE):
+            images, _ = seq_data.dataset[0][i:i+BATCH_SIZE]
+            batch = images.view(-1, 784).float().to(device)
+            model.seq_phase(batch, mode)
+    logging.info(f"Sequential training complete.")
 
 def test_model(model, test_data):
     data = test_data.dataset.data.view(-1, 784).float().to(device)
@@ -61,7 +67,7 @@ def main():
     train_data, seq_data, test_data = load_and_split_data()
     model = oselm_init()
     train_model(model, train_data, seq_data, mode = "sample")
-    test_model(model, test_data)
+    # test_model(model, test_data)
     
 if __name__ == "__main__":
     main()
