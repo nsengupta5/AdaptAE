@@ -31,25 +31,23 @@ def main():
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
-    num_epochs = 10
+    num_epochs = 3
     outputs = []
 
-    with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
-        with record_function("model_training"):
-            for epoch in range(num_epochs):
-                for (img, _) in data_loader:
-                    img = img.reshape(-1, 28*28).to(device)
-                    recon = model(img)
-                    loss = criterion(recon, img)
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+        for epoch in range(num_epochs):
+            for (img, _) in data_loader:
+                img = img.reshape(-1, 28*28).to(device)
+                recon = model(img)
+                loss = criterion(recon, img)
 
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-                
-                print(f'Epoch:{epoch+1}, Loss:{loss.item():.4f}')
-                outputs.append((epoch, img, recon))
-
-    print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            
+            print(f'Epoch:{epoch+1}, Loss:{loss.item():.4f}')
+            outputs.append((epoch, img, recon))
+    print(prof.key_averages().table(sort_by="cuda_time_total"))
 
 if __name__ == "__main__":
     main()

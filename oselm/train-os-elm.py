@@ -4,6 +4,7 @@ from torch.backends import mps
 from torch import cuda
 from torch.utils.data import random_split
 import logging
+from torch.profiler import profile, ProfilerActivity
 
 TRAIN_SIZE_PROP = 0.6
 SEQ_SIZE_PROP = 0.2
@@ -40,15 +41,19 @@ def train_model(model, train_data, seq_data, mode):
     logging.basicConfig(level=logging.INFO)
     data = train_data.dataset.data.view(-1, 784).float().to(device)
     logging.info(f"Initial training on {len(data)} samples...")
-    model.init_phase(data)
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+        model.init_phase(data)
+    print(prof.key_averages().table(sort_by="cuda_time_total"))
     logging.info(f"Initial training complete.")
 
     logging.info(f"Sequential training on {len(seq_data.dataset)} samples...")
     if mode == "sample":
-        for i in range(len(seq_data.dataset)):
-            image, _ = seq_data.dataset[i]
-            sample = image.view(-1, 784).float().to(device)
-            model.seq_phase(sample, mode)
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+            for i in range(20000):
+                image, _ = seq_data.dataset[i]
+                sample = image.view(-1, 784).float().to(device)
+                model.seq_phase(sample, mode)
+        print(prof.key_averages().table(sort_by="cuda_time_total"))
     else:
         for i in range(0, len(seq_data.dataset), BATCH_SIZE):
             images, _ = seq_data.dataset[0][i:i+BATCH_SIZE]
