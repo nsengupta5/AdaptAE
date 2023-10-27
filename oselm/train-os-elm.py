@@ -50,14 +50,18 @@ def train_model(model, train_data, seq_data, mode):
             batch = images.view(-1, 784).float().to(device)
             model.seq_phase(batch, mode)
 
+def test_model(model, test_data):
+    data = test_data.dataset.data.view(-1, 784).float().to(device)
+    pred = model.predict(data)
+    loss, accuracy = model.evaluate(data, pred)
+    print("Loss: ", loss)
+    print("Accuracy: ", accuracy)
+
 def main():
     train_data, seq_data, test_data = load_and_split_data()
     model = oselm_init()
     train_model(model, train_data, seq_data, mode = "sample")
-    pred = model.predict(test_data)
-    loss, accuracy = model.evaluate(test_data, pred)
-    print("Loss: ", loss)
-    print("Accuracy: ", accuracy)
+    test_model(model, test_data)
     
 if __name__ == "__main__":
     main()
