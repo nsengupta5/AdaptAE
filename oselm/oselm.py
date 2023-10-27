@@ -38,7 +38,7 @@ class OSELM(nn.Module):
 
     def evaluate(self, test_data, pred_data):
         loss = self.__loss_func(self.predict(test_data), pred_data)
-        accuracy = torch.sum(torch.argmax(self.predict(test_data), dim=1) == torch.argmax(pred_data, dim=1)) / len(pred_data)
+        accuracy = torch.sum(torch.argmax(self.predict(test_data), dim=1) == torch.argmax(pred_data, dim=1)) / len(pred_data) * 100
         return loss, accuracy
 
     def init_phase(self, data):

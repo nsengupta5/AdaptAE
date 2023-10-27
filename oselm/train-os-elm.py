@@ -39,23 +39,23 @@ def train_model(model, train_data, seq_data, mode):
     data = train_data.dataset.data.view(-1, 784).float().to(device)
     model.init_phase(data)
 
-    if mode == "sample":
-        for i in range(len(seq_data.dataset)):
-            image, _ = seq_data.dataset[i]
-            sample = image.view(-1, 784).float().to(device)
-            model.seq_phase(sample, mode)
-    else:
-        for i in range(0, len(seq_data.dataset), BATCH_SIZE):
-            images, _ = seq_data.dataset[0][i:i+BATCH_SIZE]
-            batch = images.view(-1, 784).float().to(device)
-            model.seq_phase(batch, mode)
+#     if mode == "sample":
+#         for i in range(len(seq_data.dataset)):
+#             image, _ = seq_data.dataset[i]
+#             sample = image.view(-1, 784).float().to(device)
+#             model.seq_phase(sample, mode)
+#     else:
+#         for i in range(0, len(seq_data.dataset), BATCH_SIZE):
+#             images, _ = seq_data.dataset[0][i:i+BATCH_SIZE]
+#             batch = images.view(-1, 784).float().to(device)
+#             model.seq_phase(batch, mode)
 
 def test_model(model, test_data):
     data = test_data.dataset.data.view(-1, 784).float().to(device)
     pred = model.predict(data)
     loss, accuracy = model.evaluate(data, pred)
-    print("Loss: ", loss)
-    print("Accuracy: ", accuracy)
+    print(f"Loss: {loss.item():.2f}")
+    print(f"Accuracy: {accuracy.item():.2f}%")
 
 def main():
     train_data, seq_data, test_data = load_and_split_data()
