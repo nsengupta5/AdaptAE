@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.backends import mps
 from torch import cuda
 from autoencoder import Autoencoder
-from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import profile, ProfilerActivity
 
 # Get CPU, GPU or MPS Device for training
 device = (
@@ -31,7 +31,7 @@ def main():
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
-    num_epochs = 3
+    num_epochs = 1
     outputs = []
 
     with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:

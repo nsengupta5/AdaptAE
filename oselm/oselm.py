@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 from torch.linalg import pinv
 
 class OSELM(nn.Module):
@@ -12,7 +11,7 @@ class OSELM(nn.Module):
         self.__n_hidden_nodes = n_hidden_nodes
 
         if activation_func == "sigmoid":
-            self.__activation_func = F.sigmoid
+            self.__activation_func = torch.sigmoid
         else:
             raise ValueError("Activation function not supported")
 
@@ -42,7 +41,7 @@ class OSELM(nn.Module):
         return loss, accuracy
 
     def init_phase(self, data):
-        H = self.__activation_func(torch.matmul(torch.Tensor(data), self.__alpha) + self.__bias)
+        H = self.__activation_func(torch.matmul(data, self.__alpha) + self.__bias)
         H_T = torch.transpose(H, 0, 1)
         self.__p = pinv(torch.matmul(H_T, H))
         pH_T = torch.matmul(self.__p, H_T)
@@ -59,6 +58,8 @@ class OSELM(nn.Module):
         elif mode == "sample":
             self.calc_p_sample(H, H_T)
             self.calc_beta_sample(data, H, H_T)
+        else:
+            raise ValueError("Mode not supported")
 
         return self.__beta
     

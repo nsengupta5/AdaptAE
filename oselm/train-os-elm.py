@@ -41,18 +41,19 @@ def train_model(model, train_data, seq_data, mode):
     logging.basicConfig(level=logging.INFO)
     data = train_data.dataset.data.view(-1, 784).float().to(device)
     logging.info(f"Initial training on {len(data)} samples...")
-    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
-        model.init_phase(data)
-    print(prof.key_averages().table(sort_by="cuda_time_total"))
+    # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+    model.init_phase(data)
+    # print(prof.key_averages().table(sort_by="cuda_time_total"))
     logging.info(f"Initial training complete.")
 
     logging.info(f"Sequential training on {len(seq_data.dataset)} samples...")
     if mode == "sample":
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True) as prof:
-            for (image, _) in seq_data.dataset:
-                sample = image.view(-1, 784).float().to(device)
-                model.seq_phase(sample, mode)
-        print(prof.key_averages().table(sort_by="cuda_time_total"))
+        # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+        for i in range(20000):
+            image, _ = seq_data.dataset[i]
+            sample = image.view(-1, 784).float().to(device)
+            model.seq_phase(sample, mode)
+        # print(prof.key_averages().table(sort_by="cuda_time_total"))
     else:
         for i in range(0, len(seq_data.dataset), BATCH_SIZE):
             images, _ = seq_data.dataset[0][i:i+BATCH_SIZE]
@@ -71,7 +72,7 @@ def main():
     train_data, seq_data, test_data = load_and_split_data()
     model = oselm_init()
     train_model(model, train_data, seq_data, mode = "sample")
-    # test_model(model, test_data)
+    test_model(model, test_data)
     
 if __name__ == "__main__":
     main()
