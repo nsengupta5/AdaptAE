@@ -54,8 +54,6 @@ class OSELM(nn.Module):
         assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
         assert_cond(test_data.shape[1] == self.__n_input_nodes, "Test data shape does not match the input nodes")
         assert_cond(pred_data.shape[1] == self.__n_input_nodes, "Predicted data shape does not match the input nodes")
-        print(pred_data)
-        print(test_data)
         loss = self.__loss_func(self.predict(test_data), pred_data)
         # TODO Do we need accuracy?
         accuracy = torch.sum(torch.argmax(self.predict(test_data), dim=1) == torch.argmax(pred_data, dim=1)) / len(pred_data) * 100
