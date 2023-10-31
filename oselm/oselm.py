@@ -138,7 +138,8 @@ class OSELM(nn.Module):
         PHH_T = torch.matmul(PH, H_T)
         PHH_TP = torch.matmul(PHH_T, self.__p)
         H_TPH = torch.matmul(H_T, torch.matmul(self.__p, H))
-        self.__p -= torch.div(PHH_TP, 1 + H_TPH)
+        with torch.no_grad():
+            self.__p -= torch.div(PHH_TP, 1 + H_TPH)
 
     """
     Calculate the beta of the network based on sample of input data
@@ -148,7 +149,8 @@ class OSELM(nn.Module):
     def calc_beta_sample(self, sample, H, H_T):
         THB = sample - torch.matmul(H_T, self.__beta)
         PH_T = torch.matmul(self.__p, H)
-        self.__beta += torch.matmul(PH_T, THB)
+        with torch.no_grad():
+            self.__beta += torch.matmul(PH_T, THB)
 
     """
     Calculate the intermediate u of the network as part of E^2LM

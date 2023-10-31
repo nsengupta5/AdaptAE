@@ -1,7 +1,7 @@
 from oselm import OSELM, assert_cond
 from torchvision import datasets, transforms
 from torch.backends import mps
-from torch import cuda
+from torch import cuda, clamp, set_printoptions
 from torch.utils.data import random_split
 from sys import argv
 import logging
@@ -84,14 +84,16 @@ Test the OSELM model on the test data
 """
 def test_model(model, test_data):
     logging.info(f"Testing on {len(test_data.dataset)} samples...")
+    set_printoptions(sci_mode=False)
     data = test_data.dataset.data.view(-1, 784).float().to(DEVICE)
     assert_cond(data.shape[0] == len(test_data.dataset), "Test data shape mismatch")
-    for i in range(0, len(data), BATCH_SIZE):
-        images = data[i:i+BATCH_SIZE]
-        pred = model.predict(images)
-        loss, accuracy = model.evaluate(images, pred)
-        print(f"Loss: {loss.item():.2f}")
-        print(f"Accuracy: {accuracy.item():.2f}%")
+    pred = model.predict(data)
+    pred = clamp(pred, min=0)
+    print(pred[1])
+    print(data[1])
+    loss, accuracy = model.evaluate(data, pred)
+    print(f"Loss: {loss.item():.2f}")
+    print(f"Accuracy: {accuracy.item():.2f}%")
 
 def exit_with_error():
     print("Usage: train-os-elm.py <mode>")
