@@ -2,7 +2,7 @@ from oselm import OSELM, assert_cond
 from torchvision import datasets, transforms
 from torch.backends import mps
 from torch import cuda
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import random_split
 from sys import argv
 import logging
 
@@ -72,8 +72,8 @@ def train_sequential(model, seq_data, mode):
         for image in data:
             model.seq_phase(image, mode)
     else:
-        seq_loader = DataLoader(seq_data, batch_size = BATCH_SIZE, shuffle = True)
-        for images, _ in seq_loader:
+        for i in range(0, len(data), BATCH_SIZE):
+            images = data[i:i+BATCH_SIZE]
             model.seq_phase(images, mode)
     logging.info(f"Sequential training complete.")
 
@@ -86,8 +86,8 @@ def test_model(model, test_data):
     logging.info(f"Testing on {len(test_data.dataset)} samples...")
     data = test_data.dataset.data.view(-1, 784).float().to(DEVICE)
     assert_cond(data.shape[0] == len(test_data.dataset), "Test data shape mismatch")
-    test_loader = DataLoader(test_data, batch_size = BATCH_SIZE, shuffle = True)
-    for images, _ in test_loader:
+    for i in range(0, len(data), BATCH_SIZE):
+        images = data[i:i+BATCH_SIZE]
         pred = model.predict(images)
         loss, accuracy = model.evaluate(images, pred)
         print(f"Loss: {loss.item():.2f}")
