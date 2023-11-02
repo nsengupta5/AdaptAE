@@ -13,6 +13,7 @@ TEST_SIZE_PROP = 0.2
 BATCH_SIZE = 64
 INPUT_NODES = 784
 HIDDEN_NODES = 128
+CACHE_BUFFER = 2000
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -27,12 +28,13 @@ Initialize the OSELM model
 def oselm_init():
     activation_func = 'sigmoid'
     loss_func = 'mse'
-    return OSELM(activation_func, loss_func, INPUT_NODES, HIDDEN_NODES).to(DEVICE)
+    return OSELM(activation_func, loss_func, INPUT_NODES, HIDDEN_NODES, DEVICE).to(DEVICE)
 
 """
 Load and split the MNIST data into training, sequential and test data
 """
 def load_and_split_data():
+    logging.info(f"Loading and preparing MNIST data...")
     transform = transforms.ToTensor()
     mnist_data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
 
@@ -41,6 +43,7 @@ def load_and_split_data():
     seq_size = int(0.2 * len(mnist_data))
     test_size = len(mnist_data) - train_size - seq_size
     train_data, seq_data, test_data = random_split(mnist_data, [train_size, seq_size, test_size])
+    logging.info(f"Loading and preparing MNIST data complete.")
     return train_data, seq_data, test_data
 
 """
@@ -50,7 +53,7 @@ Initialize the OSELM model with the initial training data
 """
 def train_init(model, train_data):
     # Assert that the initial training data is of the correct shape
-    data = train_data.dataset.data.view(-1, 784).float().to(DEVICE)
+    data = train_data.dataset.data.view(-1, 784).float().to(DEVICE) / 255
     assert_cond(data.shape[0] == len(train_data.dataset), "Train data shape mismatch")
     logging.info(f"Initial training on {len(data)} samples...")
     logging.info("Train data shape: " + str(data.shape))
@@ -65,12 +68,14 @@ Train the OSELM model sequentially on the sequential training data
 """
 def train_sequential(model, seq_data, mode):
     logging.info(f"Sequential training on {len(seq_data.dataset)} samples in {mode} mode...")
-    data = seq_data.dataset.data.view(-1, 784).float().to(DEVICE)
+    data = seq_data.dataset.data.view(-1, 784).float().to(DEVICE) / 255 
     assert_cond(data.shape[0] == len(seq_data.dataset), "Sequential data shape mismatch")
     logging.info("Sequential data shape: " + str(data.shape))
     if mode == "sample":
-        for image in data:
+        for idx, image in enumerate(data):
             model.seq_phase(image, mode)
+            if idx % CACHE_BUFFER == 0:
+                cuda.empty_cache()
     else:
         for i in range(0, len(data), BATCH_SIZE):
             images = data[i:i+BATCH_SIZE]
@@ -85,34 +90,38 @@ Test the OSELM model on the test data
 def test_model(model, test_data):
     logging.info(f"Testing on {len(test_data.dataset)} samples...")
     set_printoptions(sci_mode=False)
-    data = test_data.dataset.data.view(-1, 784).float().to(DEVICE)
+    data = test_data.dataset.data.view(-1, 784).float().to(DEVICE) / 255
     assert_cond(data.shape[0] == len(test_data.dataset), "Test data shape mismatch")
     pred = model.predict(data)
     pred = clamp(pred, min=0).round().int()
-    print(pred[0])
-    print(data[0])
-    loss, accuracy = model.evaluate(data, pred)
-    print(f"Loss: {loss.item():.2f}")
-    print(f"Accuracy: {accuracy.item():.2f}%")
+    loss, _ = model.evaluate(data, pred)
+    print(f"Loss: {loss.item():.5f}")
 
+"""
+Exit the program with an error message of the correct usage
+"""
 def exit_with_error():
     print("Usage: train-os-elm.py <mode>")
     print("mode: sample or batch")
     exit(1)
 
-def main():
-    # Parse command line arguments
+"""
+Get the mode of sequential training (either "sample" or "batch")
+"""
+def get_mode():
     if len(argv) == 1:
         # Default to sample mode
-        mode = "sample"
+        return "sample"
     elif len(argv) == 2:
         if argv[1] not in ["sample", "batch"]:
             exit_with_error()
         else:
-            mode = argv[1]
+            return argv[1]
     else:
         exit_with_error()
 
+def main():
+    mode = get_mode()
     logging.basicConfig(level=logging.INFO)
     train_data, seq_data, test_data = load_and_split_data()
     model = oselm_init()

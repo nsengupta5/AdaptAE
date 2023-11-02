@@ -5,7 +5,7 @@ import logging
 
 class OSELM(nn.Module):
 
-    def __init__(self, activation_func, loss_func, n_input_nodes, n_hidden_nodes):
+    def __init__(self, activation_func, loss_func, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
 
         self.__n_input_nodes = n_input_nodes
@@ -23,13 +23,12 @@ class OSELM(nn.Module):
         else:
             raise ValueError("Loss function not supported")
 
-        # Initialize the input weights and bias and make them orthogonal
         # TODO Need to make alpha and bias orthogonal?
         self.__alpha = nn.Parameter(torch.randn(n_input_nodes, n_hidden_nodes))
         self.__bias = nn.Parameter(torch.randn(n_hidden_nodes))
 
-        self.__p = nn.Parameter(torch.zeros(n_hidden_nodes, n_hidden_nodes)).clone().detach().to('cuda')
-        self.__beta = nn.Parameter(torch.zeros(n_hidden_nodes, n_input_nodes)).clone().detach().to('cuda')
+        self.__p = torch.zeros(n_hidden_nodes, n_hidden_nodes).to(device)
+        self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)
         self.__u = nn.Parameter(torch.zeros(n_hidden_nodes, n_hidden_nodes))
         self.__v = nn.Parameter(torch.zeros(n_hidden_nodes, n_input_nodes))
 
@@ -54,8 +53,7 @@ class OSELM(nn.Module):
         assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
         assert_cond(test_data.shape[1] == self.__n_input_nodes, "Test data shape does not match the input nodes")
         assert_cond(pred_data.shape[1] == self.__n_input_nodes, "Predicted data shape does not match the input nodes")
-        loss = self.__loss_func(self.predict(test_data), pred_data)
-        # TODO Do we need accuracy?
+        loss = self.__loss_func(test_data, pred_data)
         accuracy = torch.sum(torch.argmax(self.predict(test_data), dim=1) == torch.argmax(pred_data, dim=1)) / len(pred_data) * 100
         return loss, accuracy
 

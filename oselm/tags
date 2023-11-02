@@ -35,20 +35,25 @@
 !_TAG_ROLE_DESCRIPTION!Python!unknown	imported	/imported from the other module/
 !_TAG_ROLE_DESCRIPTION!Python!unknown	indirectlyImported	/classes\/variables\/functions\/modules imported in alternative name/
 BATCH_SIZE	train-os-elm.py	/^BATCH_SIZE = 64$/;"	v
-F	oselm.py	/^from torch.nn import functional as F$/;"	Y	nameref:unknown:functional
+CACHE_BUFFER	train-os-elm.py	/^CACHE_BUFFER = 2000$/;"	v
+DEVICE	train-os-elm.py	/^DEVICE = ($/;"	v
+HIDDEN_NODES	train-os-elm.py	/^HIDDEN_NODES = 128$/;"	v
+INPUT_NODES	train-os-elm.py	/^INPUT_NODES = 784$/;"	v
 OSELM	oselm.py	/^class OSELM(nn.Module):$/;"	c
 SEQ_SIZE_PROP	train-os-elm.py	/^SEQ_SIZE_PROP = 0.2$/;"	v
 TEST_SIZE_PROP	train-os-elm.py	/^TEST_SIZE_PROP = 0.2$/;"	v
 TRAIN_SIZE_PROP	train-os-elm.py	/^TRAIN_SIZE_PROP = 0.6$/;"	v
-__init__	oselm.py	/^    def __init__(self, activation_func, loss_func, n_input_nodes, n_hidden_nodes):$/;"	m	class:OSELM
+__init__	oselm.py	/^    def __init__(self, activation_func, loss_func, n_input_nodes, n_hidden_nodes, device):$/;"	m	class:OSELM
+assert_cond	oselm.py	/^def assert_cond(condition, msg):$/;"	f
 calc_beta_chunk	oselm.py	/^    def calc_beta_chunk(self, chunk, H, H_T):$/;"	m	class:OSELM
 calc_beta_sample	oselm.py	/^    def calc_beta_sample(self, sample, H, H_T):$/;"	m	class:OSELM
 calc_interm_u	oselm.py	/^    def calc_interm_u(self):$/;"	m	class:OSELM
 calc_interm_v	oselm.py	/^    def calc_interm_v(self):$/;"	m	class:OSELM
 calc_p_chunk	oselm.py	/^    def calc_p_chunk(self, chunk_size, H, H_T):$/;"	m	class:OSELM
 calc_p_sample	oselm.py	/^    def calc_p_sample(self, H, H_T):$/;"	m	class:OSELM
-device	train-os-elm.py	/^device = ($/;"	v
 evaluate	oselm.py	/^    def evaluate(self, test_data, pred_data):$/;"	m	class:OSELM
+exit_with_error	train-os-elm.py	/^def exit_with_error():$/;"	f
+get_mode	train-os-elm.py	/^def get_mode():$/;"	f
 gram_schmidt	oselm.py	/^    def gram_schmidt(self,factor):$/;"	m	class:OSELM
 hidden_shape	oselm.py	/^    def hidden_shape(self):$/;"	m	class:OSELM
 init_phase	oselm.py	/^    def init_phase(self, data):$/;"	m	class:OSELM
@@ -58,5 +63,7 @@ load_and_split_data	train-os-elm.py	/^def load_and_split_data():$/;"	f
 main	train-os-elm.py	/^def main():$/;"	f
 oselm_init	train-os-elm.py	/^def oselm_init():$/;"	f
 predict	oselm.py	/^    def predict(self, test_data):$/;"	m	class:OSELM
-seq_phase	oselm.py	/^    def seq_phase(self, data, mode="chunk"):$/;"	m	class:OSELM
-train_model	train-os-elm.py	/^def train_model(model, train_data, seq_data, mode="sample"):$/;"	f
+seq_phase	oselm.py	/^    def seq_phase(self, data, mode):$/;"	m	class:OSELM
+test_model	train-os-elm.py	/^def test_model(model, test_data):$/;"	f
+train_init	train-os-elm.py	/^def train_init(model, train_data):$/;"	f
+train_sequential	train-os-elm.py	/^def train_sequential(model, seq_data, mode):$/;"	f
