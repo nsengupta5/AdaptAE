@@ -23,9 +23,11 @@ class OSELM(nn.Module):
         else:
             raise ValueError("Loss function not supported")
 
-        # TODO Need to make alpha and bias orthogonal?
         self.__alpha = nn.Parameter(torch.randn(n_input_nodes, n_hidden_nodes))
         self.__bias = nn.Parameter(torch.randn(n_hidden_nodes))
+
+        # Orthogonalize the input weights
+        # self.__alpha.data = self.gram_schmidt(self.__alpha.data)
 
         self.__p = torch.zeros(n_hidden_nodes, n_hidden_nodes).to(device)
         self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)
@@ -132,11 +134,14 @@ class OSELM(nn.Module):
     :param H_T: The transpose of the hidden layer output matrix
     """
     def calc_p_sample(self, H, H_T):
-        PH = torch.matmul(self.__p, H)
-        PHH_T = torch.matmul(PH, H_T)
-        PHH_TP = torch.matmul(PHH_T, self.__p)
-        H_TPH = torch.matmul(H_T, torch.matmul(self.__p, H))
         with torch.no_grad():
+            PH = torch.matmul(self.__p, H)
+            PHH_T = torch.matmul(PH, H_T)
+            del PH
+            PHH_TP = torch.matmul(PHH_T, self.__p)
+            del PHH_T
+            H_TPH = torch.matmul(H_T, torch.matmul(self.__p, H))
+            del H_T
             self.__p -= torch.div(PHH_TP, 1 + H_TPH)
 
     """
@@ -145,9 +150,9 @@ class OSELM(nn.Module):
     :param H: The hidden layer output matrix
     """
     def calc_beta_sample(self, sample, H, H_T):
-        THB = sample - torch.matmul(H_T, self.__beta)
-        PH_T = torch.matmul(self.__p, H)
         with torch.no_grad():
+            THB = sample - torch.matmul(H_T, self.__beta)
+            PH_T = torch.matmul(self.__p, H)
             self.__beta += torch.matmul(PH_T, THB)
 
     """
@@ -173,11 +178,18 @@ class OSELM(nn.Module):
 
     """
     Orthogonalize the factor matrix
-    :param factor: The factor matrix
+    :param V: The factor matrix
     """
-    def gram_schmidt(self,factor):
-        Q, _ = torch.linalg.qr(factor)
-        return Q
+    def gram_schmidt(self, V):
+        n = V.shape[0]
+        U = torch.zeros_like(V)
+        for i in range(n):
+            v = V[i, :]
+            for j in range(i):
+                u = U[j, :]
+                v = v - (torch.dot(u, v) / torch.dot(u, u)) * u
+            U[i, :] = v / torch.norm(v)
+        return U
 
     """
     Return the input shape of the network
