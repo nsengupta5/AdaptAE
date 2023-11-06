@@ -38,8 +38,8 @@ def load_data(dataset):
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
             data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
-            input_nodes = 1024
-            hidden_nodes = 512
+            input_nodes = 3072
+            hidden_nodes = 1536
         case 'cifar100':
             transform = transforms.Compose([
                 transforms.ToTensor(),
@@ -47,6 +47,8 @@ def load_data(dataset):
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
             data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
+            input_nodes = 3072
+            hidden_nodes = 1536
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 

@@ -1,4 +1,4 @@
-from oselm import OSELM, assert_cond
+from elmae import ELMAE, assert_cond
 from torchvision import datasets, transforms
 from torch.backends import mps
 from torch import cuda, clamp, set_printoptions
@@ -8,10 +8,7 @@ import logging
 
 # Constants
 TRAIN_SIZE_PROP = 0.8
-SEQ_SIZE_PROP = 0
 TEST_SIZE_PROP = 0.2
-BATCH_SIZE = 64
-CACHE_BUFFER = 3000
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -21,12 +18,15 @@ DEVICE = (
 )
 
 """
-Initialize the OSELM model
+Initialize the ELMAE model
 """
-def oselm_init(input_nodes, hidden_nodes):
+def elmae_init(input_nodes, hidden_nodes):
     activation_func = 'sigmoid'
     loss_func = 'mse'
-    return OSELM(activation_func, loss_func, input_nodes, hidden_nodes, DEVICE).to(DEVICE)
+    model = ELMAE(activation_func, loss_func, input_nodes, hidden_nodes, DEVICE).to(DEVICE)
+    # Orthogonalize the hidden parameters
+    model.orthogonalize_hidden_params()
+    return model
 
 """
 Load and split the data into training, sequential and test data
@@ -62,53 +62,30 @@ def load_and_split_data(dataset):
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
-    # Split 60% for training, 20% for sequential training and 20% for testing
+    # Split 80% for training and 20% for testing
     train_size = int(TRAIN_SIZE_PROP * len(data))
-    seq_size = int(SEQ_SIZE_PROP * len(data))
-    test_size = len(data) - train_size - seq_size
-    train_data, seq_data, test_data = random_split(data, [train_size, seq_size, test_size])
+    test_size = len(data) - train_size
+    train_data, test_data = random_split(data, [train_size, test_size])
     logging.info(f"Loading and preparing data complete.")
-    return train_data, seq_data, test_data, input_nodes, hidden_nodes
+    return train_data, test_data, input_nodes, hidden_nodes
 
 """
-Initialize the OSELM model with the initial training data
-:param model: The OSELM model
-:param train_data: The initial training data
+Train the model
+:param model: The ELMAE model to train
+:param train_data: The training data
 """
-def train_init(model, train_data):
+def train_model(model, train_data):
     # Assert that the initial training data is of the correct shape
     data = train_data.dataset.data.view(-1, model.input_shape[0]).float().to(DEVICE) / 255
     assert_cond(data.shape[0] == len(train_data.dataset), "Train data shape mismatch")
-    logging.info(f"Initial training on {len(data)} samples...")
+    logging.info(f"Training on {len(data)} samples...")
     logging.info("Train data shape: " + str(data.shape))
-    model.init_phase(data)
-    logging.info(f"Initial training complete.")
-
+    model.calc_beta_sparse(data)
+    logging.info(f"Training complete.")
+    
 """
-Train the OSELM model sequentially on the sequential training data
-:param model: The OSELM model
-:param seq_data: The sequential training data
-:param mode: The mode of sequential training, either "sample" or "batch"
-"""
-def train_sequential(model, seq_data, mode):
-    logging.info(f"Sequential training on {len(seq_data.dataset)} samples in {mode} mode...")
-    data = seq_data.dataset.data.view(-1, model.input_shape[0]).float().to(DEVICE) / 255 
-    assert_cond(data.shape[0] == len(seq_data.dataset), "Sequential data shape mismatch")
-    logging.info("Sequential data shape: " + str(data.shape))
-    if mode == "sample":
-        for idx, image in enumerate(data):
-            model.seq_phase(image, mode)
-            if idx % CACHE_BUFFER == 0:
-                cuda.empty_cache()
-    else:
-        for i in range(0, len(data), BATCH_SIZE):
-            images = data[i:i+BATCH_SIZE]
-            model.seq_phase(images, mode)
-    logging.info(f"Sequential training complete.")
-
-"""
-Test the OSELM model on the test data
-:param model: The OSELM model
+Test the model
+:param model: The ELMAE model to test
 :param test_data: The test data
 """
 def test_model(model, test_data):
@@ -126,43 +103,28 @@ def test_model(model, test_data):
 Exit the program with an error message of the correct usage
 """
 def exit_with_error():
-    print("Usage: python train-os-elm.py [mode] [dataset]")
-    print("mode: sample or batch")
+    print("Usage: python train-elm-ae.py [dataset]")
     print("dataset: mnist, fashion-mnist, cifar10 or cifar100")
     exit(1)
-
-"""
-Get the mode of sequential training (either "sample" or "batch")
-"""
-def get_mode():
-    if len(argv) == 1:
-        # Default to sample mode
-        return "sample"
-    elif argv[1] not in ["sample", "batch"]:
-        exit_with_error()
-    else:
-        return argv[1]
 
 """
 Get the dataset to use (either "mnist", "fashion-mnist", "cifar10" or "cifar100")
 """
 def get_dataset():
-    if len(argv) < 3:
+    if len(argv) < 2:
         # Default to MNIST datasets
         return "mnist"
-    elif argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
+    elif argv[1] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
         exit_with_error()
     else:
-        return argv[2]
+        return argv[1]
 
 def main():
-    mode = get_mode()
     dataset = get_dataset()
     logging.basicConfig(level=logging.INFO)
-    train_data, seq_data, test_data, input_nodes, hidden_nodes = load_and_split_data(dataset)
-    model = oselm_init(input_nodes, hidden_nodes)
-    train_init(model, train_data)
-    # train_sequential(model, seq_data, mode)
+    train_data, test_data, input_nodes, hidden_nodes = load_and_split_data(dataset)
+    model = elmae_init(input_nodes, hidden_nodes)
+    train_model(model, train_data)
     test_model(model, test_data)
 
 if __name__ == "__main__":

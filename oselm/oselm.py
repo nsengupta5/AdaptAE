@@ -26,9 +26,6 @@ class OSELM(nn.Module):
         self.__alpha = nn.Parameter(torch.randn(n_input_nodes, n_hidden_nodes))
         self.__bias = nn.Parameter(torch.randn(n_hidden_nodes))
 
-        # Orthogonalize the input weights
-        # self.__alpha.data = self.gram_schmidt(self.__alpha.data)
-
         self.__p = torch.zeros(n_hidden_nodes, n_hidden_nodes).to(device)
         self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)
         self.__u = nn.Parameter(torch.zeros(n_hidden_nodes, n_hidden_nodes))
@@ -175,21 +172,6 @@ class OSELM(nn.Module):
         self.__v += v
         self.__p = pinv(self.__u)
         self.__beta = torch.matmul(pinv(self.__u), self.__v)
-
-    """
-    Orthogonalize the factor matrix
-    :param V: The factor matrix
-    """
-    def gram_schmidt(self, V):
-        n = V.shape[0]
-        U = torch.zeros_like(V)
-        for i in range(n):
-            v = V[i, :]
-            for j in range(i):
-                u = U[j, :]
-                v = v - (torch.dot(u, v) / torch.dot(u, u)) * u
-            U[i, :] = v / torch.norm(v)
-        return U
 
     """
     Return the input shape of the network
