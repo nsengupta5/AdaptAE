@@ -120,7 +120,9 @@ def main():
     logging.basicConfig(level=logging.INFO)
     dataset = get_dataset()
     train_loader, test_loader, input_nodes, hidden_nodes = load_data(dataset)
+    logging.info("Initializing the autoencoder model...")
     model = Autoencoder(input_nodes, hidden_nodes).to(DEVICE)
+    logging.info("Initializing complete.")
     train_model(model, train_loader)
     test_model(model, test_loader)
 

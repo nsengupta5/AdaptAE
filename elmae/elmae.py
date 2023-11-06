@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.linalg import pinv
 import logging
+from torch.nn.functional import normalize
 
 class ELMAE(nn.Module):
 
@@ -83,11 +84,22 @@ class ELMAE(nn.Module):
         assert_cond(H.shape[0] == train_data.shape[0], "Hidden layer shape does not match the train data")
 
         self.__beta = torch.matmul(pinv(H), train_data)
-        # TODO: Check b^Tb = I
+        b_Tb = torch.round(torch.round(torch.matmul(self.__beta, self.__beta)))
+        assert_cond(torch.allclose(b_Tb, torch.eye(self.__n_input_nodes).to(self.__device)), "Output layer parameters are not orthogonal")
 
-    # TODO: Implement orthogonalization of hidden layer parameters
+    """
+    Orthogonalize the hidden layer parameters
+    """
     def orthogonalize_hidden_params(self):
-        pass
+        q, _ = torch.linalg.qr(self.__alpha)
+        self.__alpha.data = q
+        alpha_T = torch.transpose(self.__alpha, 0, 1)
+        ident = torch.eye(self.__n_hidden_nodes).to(self.__device)
+        a_Ta = torch.round(torch.matmul(alpha_T, self.__alpha))
+        assert_cond(torch.allclose(a_Ta, ident), "Hidden layer parameters are not orthogonal")
+        self.__bias.data = normalize(self.__bias, dim=0)
+        b_Tb = torch.round(torch.matmul(self.__bias, self.__bias))
+        assert_cond(b_Tb == 1, "Hidden layer bias is not normalized")
 
     """
     Return the input shape of the network

@@ -21,11 +21,15 @@ DEVICE = (
 Initialize the ELMAE model
 """
 def elmae_init(input_nodes, hidden_nodes):
+    logging.info(f"Initializing ELMAE model...")
     activation_func = 'sigmoid'
     loss_func = 'mse'
     model = ELMAE(activation_func, loss_func, input_nodes, hidden_nodes, DEVICE).to(DEVICE)
     # Orthogonalize the hidden parameters
+    logging.info(f"Orthogonalizing hidden parameters...")
     model.orthogonalize_hidden_params()
+    logging.info(f"Orthogonalizing hidden parameters complete.")
+    logging.info(f"Initializing ELMAE model complete.")
     return model
 
 """

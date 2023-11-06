@@ -24,8 +24,10 @@ DEVICE = (
 Initialize the OSELM model
 """
 def oselm_init(input_nodes, hidden_nodes):
+    logging.info(f"Initializing OSELM model...")
     activation_func = 'sigmoid'
     loss_func = 'mse'
+    logging.info(f"Initializing OSELM model complete.")
     return OSELM(activation_func, loss_func, input_nodes, hidden_nodes, DEVICE).to(DEVICE)
 
 """
