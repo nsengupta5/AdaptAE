@@ -4,7 +4,11 @@ from torch.backends import mps
 from torch import cuda, clamp, set_printoptions
 from torch.utils.data import random_split
 from sys import argv
+import torch
 import logging
+import time
+import psutil
+import os
 
 # Constants
 TRAIN_SIZE_PROP = 0.8
@@ -80,12 +84,33 @@ Train the model
 """
 def train_model(model, train_data):
     # Assert that the initial training data is of the correct shape
-    data = train_data.dataset.data.view(-1, model.input_shape[0]).float().to(DEVICE) / 255
+    data = train_data.dataset.data.float() / 255
+    data = data.view(-1, model.input_shape[0]).to(DEVICE)
     assert_cond(data.shape[0] == len(train_data.dataset), "Train data shape mismatch")
     logging.info(f"Training on {len(data)} samples...")
     logging.info("Train data shape: " + str(data.shape))
+    # Start time tracking
+    start_time = time.time()
+
+    # Initial memory usage
+    initial_memory = torch.cuda.memory_allocated()
+
     model.calc_beta_sparse(data)
-    logging.info(f"Training complete.")
+
+    # End time tracking
+    end_time = time.time()
+    
+    # Final memory usage
+    final_memory = torch.cuda.memory_allocated()
+    peak_memory = torch.cuda.max_memory_allocated()
+
+    # Calculate time taken and memory used
+    time_taken = end_time - start_time
+    memory_used = final_memory - initial_memory
+
+    logging.info(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+    logging.info(f"Memory used during training: {memory_used / (1024 ** 2):.2f} MB")
+    logging.info(f"Training complete. Time taken: {time_taken:.2f} seconds.")
     
 """
 Test the model
@@ -95,10 +120,10 @@ Test the model
 def test_model(model, test_data):
     logging.info(f"Testing on {len(test_data.dataset)} samples...")
     set_printoptions(sci_mode=False)
-    data = test_data.dataset.data.view(-1, model.input_shape[0]).float().to(DEVICE) / 255
+    data = test_data.dataset.data.float() / 255
+    data = data.view(-1, model.input_shape[0]).to(DEVICE)
     assert_cond(data.shape[0] == len(test_data.dataset), "Test data shape mismatch")
     pred = model.predict(data)
-    pred = clamp(pred, min=0).round().int()
     loss, _ = model.evaluate(data, pred)
     print(f"Loss: {loss.item():.5f}")
     logging.info(f"Testing complete.")

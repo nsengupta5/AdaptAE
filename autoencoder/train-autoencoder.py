@@ -7,6 +7,7 @@ from torch.utils.data import random_split
 from autoencoder import Autoencoder
 import logging
 from sys import argv
+import time
 
 NUM_EPOCHS = 1
 DEVICE = (
@@ -68,6 +69,11 @@ def train_model(model, data_loader):
     logging.info(f"Training the autoencoder model...")
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+    # Time and CUDA memory tracking
+    start_time = time.time()
+    initial_memory = torch.cuda.memory_allocated()
+    peak_memory = torch.cuda.max_memory_allocated()
+
     for _ in range(NUM_EPOCHS):
         for (img, _) in data_loader:
             img = img.reshape(-1, model.input_shape[0]).to(DEVICE)
@@ -77,7 +83,15 @@ def train_model(model, data_loader):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-    logging.info(f"Training complete.")
+
+    end_time = time.time()
+    training_time = end_time - start_time
+    
+    final_memory = torch.cuda.memory_allocated()
+    peak_memory = torch.cuda.max_memory_allocated()
+    print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+    print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
+    print(f"Training complete. Time taken: {training_time:.2f} seconds.")
 
 """
 Test the autoencoder model
