@@ -69,6 +69,7 @@ def train_model(model, data_loader):
     logging.info(f"Training the autoencoder model...")
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+
     # Time and CUDA memory tracking
     start_time = time.time()
     initial_memory = torch.cuda.memory_allocated()
@@ -89,9 +90,13 @@ def train_model(model, data_loader):
     
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
+    print("\nTraining Benchmarks:")
+    print("====================")
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-    print(f"Training complete. Time taken: {training_time:.2f} seconds.")
+    print(f"Training complete. Time taken: {training_time:.2f} seconds.\n")
+
+    logging.info(f"Training complete.")
 
 """
 Test the autoencoder model

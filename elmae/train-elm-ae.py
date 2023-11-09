@@ -108,10 +108,14 @@ def train_model(model, train_data):
     # Calculate time taken and memory used
     time_taken = end_time - start_time
     memory_used = final_memory - initial_memory
+    
+    print("\nTraining Benchmarks:")
+    print("============================")
+    print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+    print(f"Memory used during training: {memory_used / (1024 ** 2):.2f} MB")
+    print(f"Training complete. Time taken: {time_taken:.2f} seconds.")
 
-    logging.info(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-    logging.info(f"Memory used during training: {memory_used / (1024 ** 2):.2f} MB")
-    logging.info(f"Training complete. Time taken: {time_taken:.2f} seconds.")
+    logging.info(f"Training complete.")
     
 """
 Test the model

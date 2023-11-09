@@ -100,9 +100,13 @@ def train_init(model, train_data):
     
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
+    print("\nInitial Training Benchmarks:")
+    print("===========================================")
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-    print(f"Initial Training complete. Time taken: {training_time:.2f} seconds.")
+    print(f"Initial Training complete. Time taken: {training_time:.2f} seconds.\n")
+
+    logging.info(f"Initial training complete")
 
 """
 Train the OSELM model sequentially on the sequential training data
@@ -131,9 +135,11 @@ def train_sequential(model, seq_data, mode):
         
         final_memory = torch.cuda.memory_allocated()
         peak_memory = torch.cuda.max_memory_allocated()
+        print("\nSequential Training Benchmarks:")
+        print("===========================================")
         print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
         print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-        print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.")
+        print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
     else:
         # Time and CUDA memory tracking
         start_time = time.time()
@@ -149,9 +155,13 @@ def train_sequential(model, seq_data, mode):
         
         final_memory = torch.cuda.memory_allocated()
         peak_memory = torch.cuda.max_memory_allocated()
+        print("\nSequential Training Benchmarks:")
+        print("===========================================")
         print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
         print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-        print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.")
+        print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
+
+    logging.info(f"Sequential training complete")
 
 """
 Test the OSELM model on the test data
@@ -222,9 +232,11 @@ def main():
     training_time = end_time - start_time
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
+    print("\nTotal Training Benchmarks:")
+    print("===========================================")
     print(f"Peak memory allocated during total training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during total training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-    print(f"Total training complete. Time taken: {training_time:.2f} seconds.")
+    print(f"Total training complete. Time taken: {training_time:.2f} seconds.\n")
     test_model(model, test_data)
 
 if __name__ == "__main__":
