@@ -7,6 +7,7 @@ from torch.utils.data import random_split
 from sys import argv
 import logging
 import time
+import warnings
 
 # Constants
 TRAIN_SIZE_PROP = 0.6
@@ -100,8 +101,9 @@ def train_init(model, train_data):
     
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
-    print("\nInitial Training Benchmarks:")
-    print("===========================================")
+    title = "Initial Training Benchmarks"
+    print("\n" + title)
+    print("=" * len(title))
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Initial Training complete. Time taken: {training_time:.2f} seconds.\n")
@@ -130,13 +132,15 @@ def train_sequential(model, seq_data, mode):
             model.seq_phase(image, mode)
             if idx % CACHE_BUFFER == 0:
                 cuda.empty_cache()
+
         end_time = time.time()
         training_time = end_time - start_time
         
         final_memory = torch.cuda.memory_allocated()
         peak_memory = torch.cuda.max_memory_allocated()
-        print("\nSequential Training Benchmarks:")
-        print("===========================================")
+        title = "Sequential Training Benchmarks"
+        print(f"\n{title}:")
+        print("=" * len(title))
         print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
         print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
         print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
@@ -155,8 +159,9 @@ def train_sequential(model, seq_data, mode):
         
         final_memory = torch.cuda.memory_allocated()
         peak_memory = torch.cuda.max_memory_allocated()
-        print("\nSequential Training Benchmarks:")
-        print("===========================================")
+        title = "Sequential Training Benchmarks:"
+        print(f"\n{title}")
+        print("=" * len(title))
         print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
         print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
         print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
@@ -177,7 +182,10 @@ def test_model(model, test_data):
     pred = model.predict(data)
     pred = clamp(pred, min=0).round().int()
     loss, _ = model.evaluate(data, pred)
-    print(f"Loss: {loss.item():.5f}")
+    title = "Total Loss:"
+    print(f"\n{title}")
+    print("=" * len(title))
+    print(f"Loss: {loss.item():.5f}\n")
     logging.info(f"Testing complete.")
 
 """
@@ -214,6 +222,7 @@ def get_dataset():
         return argv[2]
 
 def main():
+    warnings.filterwarnings("ignore", category=UserWarning)
     mode = get_mode()
     dataset = get_dataset()
     logging.basicConfig(level=logging.INFO)
@@ -232,11 +241,13 @@ def main():
     training_time = end_time - start_time
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
-    print("\nTotal Training Benchmarks:")
-    print("===========================================")
+    title = "Total Training Benchmarks:"
+    print(f"\n{title}")
+    print("=" * len(title))
     print(f"Peak memory allocated during total training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during total training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Total training complete. Time taken: {training_time:.2f} seconds.\n")
+    logging.info(f"Total training complete")
     test_model(model, test_data)
 
 if __name__ == "__main__":

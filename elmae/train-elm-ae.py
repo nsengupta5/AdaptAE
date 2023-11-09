@@ -7,6 +7,7 @@ from sys import argv
 import torch
 import logging
 import time
+import warnings
 
 # Constants
 TRAIN_SIZE_PROP = 0.8
@@ -109,11 +110,12 @@ def train_model(model, train_data):
     time_taken = end_time - start_time
     memory_used = final_memory - initial_memory
     
-    print("\nTraining Benchmarks:")
-    print("============================")
+    title = "Training Benchmarks:"
+    print(f"\n{title}")
+    print("=" * len(title))
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during training: {memory_used / (1024 ** 2):.2f} MB")
-    print(f"Training complete. Time taken: {time_taken:.2f} seconds.")
+    print(f"Training complete. Time taken: {time_taken:.2f} seconds.\n")
 
     logging.info(f"Training complete.")
     
@@ -130,7 +132,10 @@ def test_model(model, test_data):
     assert_cond(data.shape[0] == len(test_data.dataset), "Test data shape mismatch")
     pred = model.predict(data)
     loss, _ = model.evaluate(data, pred)
-    print(f"Loss: {loss.item():.5f}")
+    title = "Total Loss:"
+    print(f"\n{title}")
+    print("=" * len(title))
+    print(f"Loss: {loss.item():.5f}\n")
     logging.info(f"Testing complete.")
 
 """
@@ -154,6 +159,7 @@ def get_dataset():
         return argv[1]
 
 def main():
+    warnings.filterwarnings("ignore", category=UserWarning)
     dataset = get_dataset()
     logging.basicConfig(level=logging.INFO)
     train_data, test_data, input_nodes, hidden_nodes = load_and_split_data(dataset)

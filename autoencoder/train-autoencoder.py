@@ -90,8 +90,9 @@ def train_model(model, data_loader):
     
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
-    print("\nTraining Benchmarks:")
-    print("====================")
+    title = "Training Benchmarks"
+    print(f"\n{title}")
+    print("=" * len(title))
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Training complete. Time taken: {training_time:.2f} seconds.\n")
@@ -112,7 +113,11 @@ def test_model(model, data_loader):
             recon = model(img)
             loss = criterion(recon, img)
             total_loss += loss.item()
-    print(f'Loss: {total_loss/len(data_loader):.5f}')
+
+    title = "Total Loss"
+    print(f"\n{title}")
+    print("=" * len(title))
+    print(f'Loss: {total_loss/len(data_loader):.5f}\n')
     logging.info(f"Testing complete.")
 
 """
