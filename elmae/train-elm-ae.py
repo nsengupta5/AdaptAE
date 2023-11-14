@@ -1,7 +1,7 @@
-from elmae import ELMAE, assert_cond
+from elmae import ELMAE
 from torchvision import datasets, transforms
 from torch.backends import mps
-from torch import cuda, clamp, set_printoptions
+from torch import cuda
 from torch.utils.data import random_split
 from sys import argv
 import torch
@@ -75,68 +75,73 @@ def load_and_split_data(dataset):
     train_size = int(TRAIN_SIZE_PROP * len(data))
     test_size = len(data) - train_size
     train_data, test_data = random_split(data, [train_size, test_size])
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = train_size, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = test_size, shuffle = True)
     logging.info(f"Loading and preparing data complete.")
-    return train_data, test_data, input_nodes, hidden_nodes
+    return train_loader, test_loader, input_nodes, hidden_nodes
 
 """
 Train the model
 :param model: The ELMAE model to train
 :param train_data: The training data
 """
-def train_model(model, train_data):
-    # Assert that the initial training data is of the correct shape
-    data = torch.tensor(train_data.dataset.data).float().to(DEVICE) / 255
-    data = data.reshape(-1, model.input_shape[0])
-    assert_cond(data.shape[0] == len(train_data.dataset), "Train data shape mismatch")
-    logging.info(f"Training on {len(data)} samples...")
-    logging.info("Train data shape: " + str(data.shape))
+def train_model(model, train_loader):
+    for (data, _) in train_loader:
+        # Reshape the data
+        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        logging.info(f"Training on {len(data)} samples...")
+        logging.info("Train data shape: " + str(data.shape))
 
-    # Start time tracking
-    start_time = time.time()
-    # Initial memory usage
-    initial_memory = torch.cuda.memory_allocated()
+        # Start time tracking
+        start_time = time.time()
+        # Initial memory usage
+        initial_memory = torch.cuda.memory_allocated()
 
-    # Train the model
-    model.calc_beta_sparse(data)
+        # Train the model
+        model.calc_beta_sparse(data)
 
-    # End time tracking
-    end_time = time.time()
+        # End time tracking
+        end_time = time.time()
 
-    # Final memory usage
-    final_memory = torch.cuda.memory_allocated()
-    peak_memory = torch.cuda.max_memory_allocated()
+        # Final memory usage
+        final_memory = torch.cuda.memory_allocated()
+        peak_memory = torch.cuda.max_memory_allocated()
 
-    # Calculate time taken and memory used
-    time_taken = end_time - start_time
-    memory_used = final_memory - initial_memory
-    
-    title = "Training Benchmarks:"
-    print(f"\n{title}")
-    print("=" * len(title))
-    print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-    print(f"Memory used during training: {memory_used / (1024 ** 2):.2f} MB")
-    print(f"Training complete. Time taken: {time_taken:.2f} seconds.\n")
+        # Calculate time taken and memory used
+        time_taken = end_time - start_time
+        memory_used = final_memory - initial_memory
+        
+        title = "Training Benchmarks:"
+        print(f"\n{title}")
+        print("=" * len(title))
+        print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+        print(f"Memory used during training: {memory_used / (1024 ** 2):.2f} MB")
+        print(f"Training complete. Time taken: {time_taken:.2f} seconds.")
 
-    logging.info(f"Training complete.")
+        # Evaluate the model
+        pred = model.predict(data)
+        loss, _ = model.evaluate(data, pred)
+        print(f"Loss: {loss.item():.5f}\n")
+        logging.info(f"Training complete.")
     
 """
 Test the model
 :param model: The ELMAE model to test
 :param test_data: The test data
 """
-def test_model(model, test_data):
-    logging.info(f"Testing on {len(test_data.dataset)} samples...")
-    set_printoptions(sci_mode=False)
-    data = torch.tensor(test_data.dataset.data)
-    data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE) / 255
-    assert_cond(data.shape[0] == len(test_data.dataset), "Test data shape mismatch")
-    pred = model.predict(data)
-    loss, _ = model.evaluate(data, pred)
-    title = "Total Loss:"
-    print(f"\n{title}")
-    print("=" * len(title))
-    print(f"Loss: {loss.item():.5f}\n")
-    logging.info(f"Testing complete.")
+def test_model(model, test_loader):
+    for (data, _) in test_loader:
+        # Reshape the data
+        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        logging.info(f"Testing on {len(data)} samples...")
+        logging.info("Test data shape: " + str(data.shape))
+        pred = model.predict(data)
+        loss, _ = model.evaluate(data, pred)
+        title = "Total Loss:"
+        print(f"\n{title}")
+        print("=" * len(title))
+        print(f"Loss: {loss.item():.5f}\n")
+        logging.info(f"Testing complete.")
 
 """
 Exit the program with an error message of the correct usage
@@ -162,10 +167,10 @@ def main():
     warnings.filterwarnings("ignore", category=UserWarning)
     dataset = get_dataset()
     logging.basicConfig(level=logging.INFO)
-    train_data, test_data, input_nodes, hidden_nodes = load_and_split_data(dataset)
+    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset)
     model = elmae_init(input_nodes, hidden_nodes)
-    train_model(model, train_data)
-    test_model(model, test_data)
+    train_model(model, train_loader)
+    test_model(model, test_loader)
 
 if __name__ == "__main__":
     main()

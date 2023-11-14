@@ -9,7 +9,9 @@ import logging
 from sys import argv
 import time
 
-NUM_EPOCHS = 1
+BATCH_SIZE = 64
+TRAIN_SIZE_PROP=0.8
+NUM_EPOCHS = 5
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -40,7 +42,7 @@ def load_data(dataset):
             ])
             data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
             input_nodes = 3072
-            hidden_nodes = 1536
+            hidden_nodes = 1024
         case 'cifar100':
             transform = transforms.Compose([
                 transforms.ToTensor(),
@@ -49,15 +51,15 @@ def load_data(dataset):
             ])
             data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
             input_nodes = 3072
-            hidden_nodes = 1536
+            hidden_nodes = 1024
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
-    train_size = int(0.8 * len(data))
+    train_size = int(TRAIN_SIZE_PROP * len(data))
     test_size = len(data) - train_size
     train_data, test_data = random_split(data, [train_size, test_size])
-    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = 64, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = 64, shuffle = True)
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = BATCH_SIZE, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = BATCH_SIZE, shuffle = True)
     logging.info(f"Loading and preparing data complete.")
     return train_loader, test_loader, input_nodes, hidden_nodes
 
@@ -75,16 +77,21 @@ def train_model(model, data_loader):
     initial_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
 
-    for _ in range(NUM_EPOCHS):
+    logging.info(f"Training on {len(data_loader)} batches...")
+    for epoch in range(NUM_EPOCHS):
+        loss = 0
         for (img, _) in data_loader:
             img = img.reshape(-1, model.input_shape[0]).to(DEVICE)
             recon = model(img)
-            loss = criterion(recon, img)
+            train_loss = criterion(recon, img)
 
             optimizer.zero_grad()
-            loss.backward()
+            train_loss.backward()
             optimizer.step()
+            loss += train_loss.item()
 
+        loss /= len(data_loader)
+        print(f"Epoch: {epoch+1}/{NUM_EPOCHS}, Loss: {loss:.5f}")
     end_time = time.time()
     training_time = end_time - start_time
     
@@ -107,6 +114,7 @@ def test_model(model, data_loader):
     logging.info(f"Testing the autoencoder model...")
     criterion = nn.MSELoss()
     total_loss = 0
+    logging.info(f"Testing on {len(data_loader)} batches...")
     with torch.no_grad():
         for (img, _) in data_loader:
             img = img.reshape(-1, model.input_shape[0]).to(DEVICE)

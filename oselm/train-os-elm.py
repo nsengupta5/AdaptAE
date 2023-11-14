@@ -1,8 +1,8 @@
 import torch
-from oselm import OSELM, assert_cond
+from oselm import OSELM
 from torchvision import datasets, transforms
 from torch.backends import mps
-from torch import cuda, clamp, set_printoptions
+from torch import cuda
 from torch.utils.data import random_split
 from sys import argv
 import logging
@@ -13,8 +13,7 @@ import warnings
 TRAIN_SIZE_PROP = 0.6
 SEQ_SIZE_PROP = 0.2
 TEST_SIZE_PROP = 0.2
-BATCH_SIZE = 64
-CACHE_BUFFER = 3000
+BATCH_SIZE = 20
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -36,11 +35,14 @@ def oselm_init(input_nodes, hidden_nodes):
 """
 Load and split the data into training, sequential and test data
 """
-def load_and_split_data(dataset):
+def load_and_split_data(dataset, mode):
     logging.info(f"Loading and preparing data...")
     transform = transforms.ToTensor()
     input_nodes = 784
     hidden_nodes = 128
+    batch_size = BATCH_SIZE
+    if mode == "sample":
+        batch_size = 1
     match dataset:
         case 'mnist':
             transform = transforms.ToTensor()
@@ -74,41 +76,47 @@ def load_and_split_data(dataset):
     seq_size = int(SEQ_SIZE_PROP * len(data))
     test_size = len(data) - train_size - seq_size
     train_data, seq_data, test_data = random_split(data, [train_size, seq_size, test_size])
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
+    seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size = BATCH_SIZE, shuffle = True)
     logging.info(f"Loading and preparing data complete.")
-    return train_data, seq_data, test_data, input_nodes, hidden_nodes
+    return train_loader, seq_loader, test_loader, input_nodes, hidden_nodes
 
 """
 Initialize the OSELM model with the initial training data
 :param model: The OSELM model
 :param train_data: The initial training data
 """
-def train_init(model, train_data):
-    # Assert that the initial training data is of the correct shape
-    data = torch.tensor(train_data.dataset.data).float().to(DEVICE) / 255
-    data = data.reshape(-1, model.input_shape[0])
-    assert_cond(data.shape[0] == len(train_data.dataset), "Train data shape mismatch")
-    logging.info(f"Initial training on {len(data)} samples...")
-    logging.info("Train data shape: " + str(data.shape))
+def train_init(model, train_loader):
+    for (data, _) in train_loader:
+        # Reshape the data to fit the model
+        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        logging.info(f"Initial training on {len(data)} samples...")
+        logging.info("Train data shape: " + str(data.shape))
 
-    # Time and CUDA memory tracking
-    start_time = time.time()
-    initial_memory = torch.cuda.memory_allocated()
-    peak_memory = torch.cuda.max_memory_allocated()
+        # Time and CUDA memory tracking
+        start_time = time.time()
+        initial_memory = torch.cuda.memory_allocated()
+        peak_memory = torch.cuda.max_memory_allocated()
 
-    model.init_phase(data)
-    end_time = time.time()
-    training_time = end_time - start_time
-    
-    final_memory = torch.cuda.memory_allocated()
-    peak_memory = torch.cuda.max_memory_allocated()
-    title = "Initial Training Benchmarks"
-    print("\n" + title)
-    print("=" * len(title))
-    print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-    print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-    print(f"Initial Training complete. Time taken: {training_time:.2f} seconds.\n")
+        model.init_phase(data)
+        end_time = time.time()
+        training_time = end_time - start_time
+        
+        final_memory = torch.cuda.memory_allocated()
+        peak_memory = torch.cuda.max_memory_allocated()
+        title = "Initial Training Benchmarks"
+        print("\n" + title)
+        print("=" * len(title))
+        print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+        print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
+        print(f"Initial Training complete. Time taken: {training_time:.2f} seconds.\n")
 
-    logging.info(f"Initial training complete")
+        # Evaluate the model on the initial training data
+        pred = model.predict(data)
+        loss, _ = model.evaluate(data, pred)
+        print(f"Initial training loss: {loss:.2f}")
+        logging.info(f"Initial training complete")
 
 """
 Train the OSELM model sequentially on the sequential training data
@@ -116,56 +124,49 @@ Train the OSELM model sequentially on the sequential training data
 :param seq_data: The sequential training data
 :param mode: The mode of sequential training, either "sample" or "batch"
 """
-def train_sequential(model, seq_data, mode):
-    logging.info(f"Sequential training on {len(seq_data.dataset)} samples in {mode} mode...")
-    data = torch.tensor(seq_data.dataset.data).float().to(DEVICE) / 255
-    data = data.reshape(-1, model.input_shape[0])
-    assert_cond(data.shape[0] == len(seq_data.dataset), "Sequential data shape mismatch")
-    logging.info("Sequential data shape: " + str(data.shape))
-    if mode == "sample":
-        # Time and CUDA memory tracking
-        start_time = time.time()
-        initial_memory = torch.cuda.memory_allocated()
-        peak_memory = torch.cuda.max_memory_allocated()
+def train_sequential(model, seq_loader, mode):
+    logging.info(f"Sequential training on {len(seq_loader)} batches in {mode} mode...")
+    # Time and CUDA memory tracking
+    start_time = time.time()
+    initial_memory = torch.cuda.memory_allocated()
+    peak_memory = torch.cuda.max_memory_allocated()
 
-        for idx, image in enumerate(data):
-            model.seq_phase(image, mode)
-            if idx % CACHE_BUFFER == 0:
-                cuda.empty_cache()
+    # Metrics for each iteration
+    sample_times = []
+    sample_memory = []
+    total_loss = 0
+    for (data, _) in seq_loader:
+        # Reshape the data to fit the model
+        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        sample_start_time = time.time()
+        sample_initial_memory = torch.cuda.memory_allocated()
 
-        end_time = time.time()
-        training_time = end_time - start_time
-        
-        final_memory = torch.cuda.memory_allocated()
-        peak_memory = torch.cuda.max_memory_allocated()
-        title = "Sequential Training Benchmarks"
-        print(f"\n{title}:")
-        print("=" * len(title))
-        print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-        print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-        print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
-    else:
-        # Time and CUDA memory tracking
-        start_time = time.time()
-        initial_memory = torch.cuda.memory_allocated()
-        peak_memory = torch.cuda.max_memory_allocated()
+        model.seq_phase(data, mode)
 
-        for i in range(0, len(data), BATCH_SIZE):
-            images = data[i:i+BATCH_SIZE]
-            model.seq_phase(images, mode)
+        sample_end_time = time.time()
+        sample_times.append(sample_end_time - sample_start_time)
+        sample_memory.append(torch.cuda.memory_allocated() - sample_initial_memory)
 
-        end_time = time.time()
-        training_time = end_time - start_time
-        
-        final_memory = torch.cuda.memory_allocated()
-        peak_memory = torch.cuda.max_memory_allocated()
-        title = "Sequential Training Benchmarks:"
-        print(f"\n{title}")
-        print("=" * len(title))
-        print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-        print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
-        print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
+        pred = model.predict(data)
+        loss, _ = model.evaluate(data, pred)
+        total_loss += loss.item()
 
+    end_time = time.time()
+    training_time = end_time - start_time
+    sample_avg_time = sum(sample_times) / len(sample_times)
+    sample_avg_memory = sum(sample_memory) / len(sample_memory)
+    
+    final_memory = torch.cuda.memory_allocated()
+    peak_memory = torch.cuda.max_memory_allocated()
+    title = "Sequential Training Benchmarks"
+    print(f"\n{title}:")
+    print("=" * len(title))
+    print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+    print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
+    print(f"Average time per sample: {sample_avg_time:.5f} seconds")
+    print(f"Average memory per sample: {sample_avg_memory / (1024 ** 2):.5f} MB")
+    print(f"Average Loss: {total_loss / len(seq_loader):.2f}")
+    print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
     logging.info(f"Sequential training complete")
 
 """
@@ -173,19 +174,20 @@ Test the OSELM model on the test data
 :param model: The OSELM model
 :param test_data: The test data
 """
-def test_model(model, test_data):
-    logging.info(f"Testing on {len(test_data.dataset)} samples...")
-    set_printoptions(sci_mode=False)
-    data = torch.tensor(test_data.dataset.data).float().to(DEVICE) / 255
-    data = data.reshape(-1, model.input_shape[0])
-    assert_cond(data.shape[0] == len(test_data.dataset), "Test data shape mismatch")
-    pred = model.predict(data)
-    pred = clamp(pred, min=0).round().int()
-    loss, _ = model.evaluate(data, pred)
+def test_model(model, test_loader):
+    logging.info(f"Testing on {len(test_loader.dataset)} batches...")
+    losses = []
+    for (data, _) in test_loader:
+        # Reshape the data to fit the model
+        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        pred = model.predict(data)
+        loss, _ = model.evaluate(data, pred)
+        losses.append(loss.item())
+    loss = sum(losses) / len(losses)
     title = "Total Loss:"
     print(f"\n{title}")
     print("=" * len(title))
-    print(f"Loss: {loss.item():.5f}\n")
+    print(f"Loss: {loss:.5f}\n")
     logging.info(f"Testing complete.")
 
 """
@@ -226,7 +228,7 @@ def main():
     mode = get_mode()
     dataset = get_dataset()
     logging.basicConfig(level=logging.INFO)
-    train_data, seq_data, test_data, input_nodes, hidden_nodes = load_and_split_data(dataset)
+    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode)
     model = oselm_init(input_nodes, hidden_nodes)
 
     # Time and CUDA memory tracking
@@ -234,8 +236,8 @@ def main():
     initial_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
 
-    train_init(model, train_data)
-    train_sequential(model, seq_data, mode)
+    train_init(model, train_loader)
+    train_sequential(model, seq_loader, mode)
 
     end_time = time.time()
     training_time = end_time - start_time
@@ -248,7 +250,7 @@ def main():
     print(f"Memory used during total training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Total training complete. Time taken: {training_time:.2f} seconds.\n")
     logging.info(f"Total training complete")
-    test_model(model, test_data)
+    test_model(model, test_loader)
 
 if __name__ == "__main__":
     main()

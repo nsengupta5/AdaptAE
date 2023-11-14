@@ -30,6 +30,7 @@ class OSELM(nn.Module):
         self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)
         self.__u = nn.Parameter(torch.zeros(n_hidden_nodes, n_hidden_nodes))
         self.__v = nn.Parameter(torch.zeros(n_hidden_nodes, n_input_nodes))
+        self.__device = device
 
     """
     Predict the output of the network based on the input data
@@ -77,13 +78,13 @@ class OSELM(nn.Module):
     """
     Sequentially train the network based on the input data
     :param data: The input data for sequential training
-    :param mode: The mode of training, either "chunk" or "sample"
+    :param mode: The mode of training, either "batch" or "sample"
     """
     def seq_phase(self, data, mode):
         # Assert that the hidden layer shape matches the hidden nodes
         H = self.__activation_func(torch.matmul(data, self.__alpha) + self.__bias)
 
-        if mode == "chunk":
+        if mode == "batch":
             H_T = torch.transpose(H, 0, 1)
             assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
             assert_cond(data.shape[1] == self.__n_input_nodes, "Input data shape does not match the input nodes")
@@ -109,7 +110,7 @@ class OSELM(nn.Module):
     """
     def calc_p_chunk(self, chunk_size, H, H_T):
         PH_T = torch.matmul(self.__p, H_T)
-        I = torch.eye(chunk_size)
+        I = torch.eye(chunk_size).to(self.__device)
         HPH_T_Inv = pinv(torch.matmul(H, torch.matmul(self.__p, H_T)) + I)
         HP = torch.matmul(H, self.__p)
         self.__p -= torch.matmul(torch.matmul(PH_T, HPH_T_Inv), HP)
