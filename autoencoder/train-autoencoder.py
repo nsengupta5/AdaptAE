@@ -8,10 +8,11 @@ from autoencoder import Autoencoder
 import logging
 from sys import argv
 import time
+import matplotlib.pyplot as plt
 
 BATCH_SIZE = 64
 TRAIN_SIZE_PROP=0.8
-NUM_EPOCHS = 5
+NUM_EPOCHS = 30
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -78,6 +79,7 @@ def train_model(model, data_loader):
     peak_memory = torch.cuda.max_memory_allocated()
 
     logging.info(f"Training on {len(data_loader)} batches...")
+    losses = []
     for epoch in range(NUM_EPOCHS):
         loss = 0
         for (img, _) in data_loader:
@@ -91,6 +93,7 @@ def train_model(model, data_loader):
             loss += train_loss.item()
 
         loss /= len(data_loader)
+        losses.append(loss)
         print(f"Epoch: {epoch+1}/{NUM_EPOCHS}, Loss: {loss:.5f}")
     end_time = time.time()
     training_time = end_time - start_time
@@ -103,6 +106,9 @@ def train_model(model, data_loader):
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
     print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Training complete. Time taken: {training_time:.2f} seconds.\n")
+
+    # Plot the loss
+    create_plots(losses)
 
     logging.info(f"Training complete.")
 
@@ -147,6 +153,13 @@ def exit_with_usage():
     print(f"Usage: python train-autoencoder.py <dataset>")
     print("dataset: mnist, fashion-mnist, cifar10, cifar100")
     exit(1)
+
+def create_plots(losses):
+    plt.plot(losses)
+    plt.title("Loss vs Epoch")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.show()
 
 def main():
     logging.basicConfig(level=logging.INFO)
