@@ -8,6 +8,7 @@ import torch
 import logging
 import time
 import warnings
+import matplotlib.pyplot as plt
 
 # Constants
 TRAIN_SIZE_PROP = 0.8
@@ -122,20 +123,25 @@ def train_model(model, train_loader):
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         print(f"Loss: {loss.item():.5f}\n")
+
         logging.info(f"Training complete.")
-    
+
 """
 Test the model
 :param model: The ELMAE model to test
 :param test_data: The test data
 """
-def test_model(model, test_loader):
+def test_model(model, test_loader, dataset):
     for (data, _) in test_loader:
         # Reshape the data
         data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
         logging.info(f"Testing on {len(data)} samples...")
         logging.info("Test data shape: " + str(data.shape))
         pred = model.predict(data)
+
+        # Visualize the results
+        visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset)
+
         loss, _ = model.evaluate(data, pred)
         title = "Total Loss:"
         print(f"\n{title}")
@@ -150,6 +156,37 @@ def exit_with_error():
     print("Usage: python train-elm-ae.py [dataset]")
     print("dataset: mnist, fashion-mnist, cifar10 or cifar100")
     exit(1)
+
+
+"""
+Visualize the original and reconstructed images
+:param originals: The original images
+:param reconstructions: The reconstructed images
+:param dataset: The dataset used
+:param n: The number of images to visualize
+"""
+def visualize_comparisons(originals, reconstructions, dataset, n=5):
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        # Display original images
+        ax = plt.subplot(2, n, i + 1)
+        if dataset in ["mnist", "fashion-mnist"]:
+            plt.imshow(originals[i].reshape(28, 28))
+        else:
+            plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        # Display reconstructed images
+        ax = plt.subplot(2, n, i + 1 + n)
+        if dataset in ["mnist", "fashion-mnist"]:
+            plt.imshow(reconstructions[i].reshape(28, 28))
+        else:
+            plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    plt.savefig(f"elmae/results/{dataset}-reconstructions.png")
 
 """
 Get the dataset to use (either "mnist", "fashion-mnist", "cifar10" or "cifar100")
@@ -170,7 +207,7 @@ def main():
     train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset)
     model = elmae_init(input_nodes, hidden_nodes)
     train_model(model, train_loader)
-    test_model(model, test_loader)
+    test_model(model, test_loader, dataset)
 
 if __name__ == "__main__":
     main()

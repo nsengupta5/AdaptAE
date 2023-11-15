@@ -119,17 +119,21 @@ def train_model(dataset, model, data_loader):
 Test the autoencoder model
 :param model: The autoencoder model
 """
-def test_model(model, data_loader):
+def test_model(dataset, model, data_loader):
     logging.info(f"Testing the autoencoder model...")
     criterion = nn.MSELoss()
     total_loss = 0
     logging.info(f"Testing on {len(data_loader)} batches...")
+    saved_img = False
     with torch.no_grad():
         for (img, _) in data_loader:
             img = img.reshape(-1, model.input_shape[0]).to(DEVICE)
             recon = model(img)
             loss = criterion(recon, img)
             total_loss += loss.item()
+            if not saved_img:
+                visualize_comparisons(dataset, img.cpu().numpy(), recon.cpu().numpy())
+                saved_img = True
 
     title = "Total Loss"
     print(f"\n{title}")
@@ -186,6 +190,37 @@ def create_plots(dataset, losses, times):
     plt.ylabel("Time (s)")
     plt.savefig(f"plots/{dataset}-loss-vs-time.png")
 
+"""
+Visualize the original and reconstructed images
+:param originals: The original images
+:param reconstructions: The reconstructed images
+:param dataset: The dataset used
+:param n: The number of images to visualize
+"""
+def visualize_comparisons(dataset, originals, reconstructions, n=5):
+    plt.figure(figsize=(20, 4))
+    for i in range(n):
+        # Display original images
+        ax = plt.subplot(2, n, i + 1)
+        if dataset in ["mnist", "fashion-mnist"]:
+            plt.imshow(originals[i].reshape(28, 28))
+        else:
+            plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        # Display reconstructed images
+        ax = plt.subplot(2, n, i + 1 + n)
+        if dataset in ["mnist", "fashion-mnist"]:
+            plt.imshow(reconstructions[i].reshape(28, 28))
+        else:
+            plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    plt.savefig(f"autoencoder/results/{dataset}-reconstructions.png")
+
+
 def main():
     logging.basicConfig(level=logging.INFO)
     dataset = get_dataset()
@@ -194,7 +229,7 @@ def main():
     model = Autoencoder(input_nodes, hidden_nodes).to(DEVICE)
     logging.info("Initializing complete.")
     train_model(dataset, model, train_loader)
-    test_model(model, test_loader)
+    test_model(dataset, model, test_loader)
 
 if __name__ == "__main__":
     main()
