@@ -68,7 +68,7 @@ def load_data(dataset):
 Train the autoencoder model
 :param model: The autoencoder model
 """
-def train_model(model, data_loader):
+def train_model(dataset, model, data_loader):
     logging.info(f"Training the autoencoder model...")
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -80,8 +80,10 @@ def train_model(model, data_loader):
 
     logging.info(f"Training on {len(data_loader)} batches...")
     losses = []
+    times = []
     for epoch in range(NUM_EPOCHS):
         loss = 0
+        epoch_start_time = time.time()
         for (img, _) in data_loader:
             img = img.reshape(-1, model.input_shape[0]).to(DEVICE)
             recon = model(img)
@@ -92,12 +94,14 @@ def train_model(model, data_loader):
             optimizer.step()
             loss += train_loss.item()
 
+        epoch_end_time = time.time()
         loss /= len(data_loader)
         losses.append(loss)
+        times.append(epoch_end_time - epoch_start_time)
         print(f"Epoch: {epoch+1}/{NUM_EPOCHS}, Loss: {loss:.5f}")
+
     end_time = time.time()
     training_time = end_time - start_time
-    
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()
     title = "Training Benchmarks"
@@ -107,9 +111,8 @@ def train_model(model, data_loader):
     print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Training complete. Time taken: {training_time:.2f} seconds.\n")
 
-    # Plot the loss
-    create_plots(losses)
-
+    # Create plots
+    create_plots(dataset, losses, times)
     logging.info(f"Training complete.")
 
 """
@@ -154,12 +157,34 @@ def exit_with_usage():
     print("dataset: mnist, fashion-mnist, cifar10, cifar100")
     exit(1)
 
-def create_plots(losses):
+"""
+Create plots for the loss vs epoch, time vs epoch and loss vs time
+"""
+def create_plots(dataset, losses, times):
+    # Plot the loss vs epoch
     plt.plot(losses)
     plt.title("Loss vs Epoch")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.show()
+    plt.savefig(f"plots/{dataset}-loss-vs-epoch.png")
+
+    plt.clf()
+
+    # Plot the time vs epoch
+    plt.plot(times)
+    plt.title("Time vs Epoch")
+    plt.xlabel("Epoch")
+    plt.ylabel("Time (s)")
+    plt.savefig(f"plots/{dataset}-time-vs-epoch.png")
+
+    plt.clf()
+
+    # Plot the loss vs time
+    plt.plot(losses, times)
+    plt.title("Loss vs Time")
+    plt.xlabel("Loss")
+    plt.ylabel("Time (s)")
+    plt.savefig(f"plots/{dataset}-loss-vs-time.png")
 
 def main():
     logging.basicConfig(level=logging.INFO)
@@ -168,7 +193,7 @@ def main():
     logging.info("Initializing the autoencoder model...")
     model = Autoencoder(input_nodes, hidden_nodes).to(DEVICE)
     logging.info("Initializing complete.")
-    train_model(model, train_loader)
+    train_model(dataset, model, train_loader)
     test_model(model, test_loader)
 
 if __name__ == "__main__":
