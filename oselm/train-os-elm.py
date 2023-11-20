@@ -13,7 +13,7 @@ import warnings
 TRAIN_SIZE_PROP = 0.6
 SEQ_SIZE_PROP = 0.2
 TEST_SIZE_PROP = 0.2
-BATCH_SIZE = 20
+DEFAULT_BATCH_SIZE = 20
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -34,13 +34,15 @@ def oselm_init(input_nodes, hidden_nodes):
 
 """
 Load and split the data into training, sequential and test data
+param dataset: The dataset to load
+param mode: The mode to load the data in
+param batch_size: The batch size to use (default sample)
 """
-def load_and_split_data(dataset, mode):
+def load_and_split_data(dataset, mode, batch_size = 1):
     logging.info(f"Loading and preparing data...")
     transform = transforms.ToTensor()
     input_nodes = 784
     hidden_nodes = 128
-    batch_size = BATCH_SIZE
     if mode == "sample":
         batch_size = 1
     match dataset:
@@ -78,7 +80,7 @@ def load_and_split_data(dataset, mode):
     train_data, seq_data, test_data = random_split(data, [train_size, seq_size, test_size])
     train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
     seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size = BATCH_SIZE, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = True)
     logging.info(f"Loading and preparing data complete.")
     return train_loader, seq_loader, test_loader, input_nodes, hidden_nodes
 
@@ -194,9 +196,10 @@ def test_model(model, test_loader):
 Exit the program with an error message of the correct usage
 """
 def exit_with_error():
-    print("Usage: python train-os-elm.py [mode] [dataset]")
+    print("Usage: python train-os-elm.py [mode] <batch size> [dataset]")
     print("mode: sample or batch")
     print("dataset: mnist, fashion-mnist, cifar10 or cifar100")
+    print("batch size: integer (only required for batch mode and defaults to 20 if not provided)")
     exit(1)
 
 """
@@ -213,22 +216,41 @@ def get_mode():
 
 """
 Get the dataset to use (either "mnist", "fashion-mnist", "cifar10" or "cifar100")
+:param mode: The mode of sequential training (either "sample" or "batch")
 """
-def get_dataset():
-    if len(argv) < 3:
+def get_dataset(mode):
+    arg_len = 2 if mode == "sample" else 3
+    if len(argv) < arg_len + 1:
         # Default to MNIST datasets
         return "mnist"
-    elif argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
+    elif argv[arg_len] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
         exit_with_error()
     else:
-        return argv[2]
+        return argv[arg_len]
 
+"""
+Get the batch size to use
+:param mode: The mode of sequential training (either "sample" or "batch")
+"""
+def get_batch_size(mode):
+    if mode == "sample":
+        return 1
+    else:
+        try:
+            return int(argv[2])
+        except:
+            if argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
+                exit_with_error()
+            else:
+                return DEFAULT_BATCH_SIZE
+        
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
     mode = get_mode()
-    dataset = get_dataset()
+    dataset = get_dataset(mode)
+    batch_size = get_batch_size(mode)
     logging.basicConfig(level=logging.INFO)
-    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode)
+    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size)
     model = oselm_init(input_nodes, hidden_nodes)
 
     # Time and CUDA memory tracking

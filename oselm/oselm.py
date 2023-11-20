@@ -88,9 +88,9 @@ class OSELM(nn.Module):
             H_T = torch.transpose(H, 0, 1)
             assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
             assert_cond(data.shape[1] == self.__n_input_nodes, "Input data shape does not match the input nodes")
-            chunk_size = data.shape[0]
-            self.calc_p_chunk(chunk_size, H, H_T)
-            self.calc_beta_chunk(data, H, H_T)
+            batch_size = data.shape[0]
+            self.calc_p_batch(batch_size, H, H_T)
+            self.calc_beta_batch(data, H, H_T)
         elif mode == "sample":
             H = H.unsqueeze(1)
             H_T = torch.transpose(H, 0, 1)
@@ -103,26 +103,26 @@ class OSELM(nn.Module):
         return self.__beta
 
     """
-    Calculate the p of the network based on chunk of input data
-    :param chunk_size: The size of the chunk
+    Calculate the p of the network based on batch of input data
+    :param batch_size: The size of the batch
     :param H: The hidden layer output matrix
     :param H_T: The transpose of the hidden layer output matrix
     """
-    def calc_p_chunk(self, chunk_size, H, H_T):
+    def calc_p_batch(self, batch_size, H, H_T):
         PH_T = torch.matmul(self.__p, H_T)
-        I = torch.eye(chunk_size).to(self.__device)
+        I = torch.eye(batch_size).to(self.__device)
         HPH_T_Inv = pinv(torch.matmul(H, torch.matmul(self.__p, H_T)) + I)
         HP = torch.matmul(H, self.__p)
         self.__p -= torch.matmul(torch.matmul(PH_T, HPH_T_Inv), HP)
 
     """
-    Calculate the beta of the network based on chunk of input data
-    :param chunk: The chunk of input data
+    Calculate the beta of the network based on batch of input data
+    :param batch: The batch of input data
     :param H: The hidden layer output matrix
     :param H_T: The transpose of the hidden layer output matrix
     """
-    def calc_beta_chunk(self, chunk, H, H_T):
-        T = torch.transpose(chunk, 0, 1)
+    def calc_beta_batch(self, batch, H, H_T):
+        T = torch.transpose(batch, 0, 1)
         THB = T - torch.matmul(H, self.__beta)
         self.__beta += torch.matmul(torch.matmul(self.__p, H_T), THB)
 

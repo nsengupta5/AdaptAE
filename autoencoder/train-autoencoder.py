@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 BATCH_SIZE = 64
 TRAIN_SIZE_PROP=0.8
-NUM_EPOCHS = 30
+NUM_EPOCHS = 50
 DEVICE = (
     "cuda"
     if cuda.is_available()
