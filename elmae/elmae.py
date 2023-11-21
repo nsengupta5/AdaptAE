@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.linalg import pinv
+from torch.linalg import lstsq
 import logging
 from torch.nn.functional import normalize
 
@@ -69,8 +69,9 @@ class ELMAE(nn.Module):
         H_T = torch.transpose(H, 0, 1)
         ident = torch.eye(self.__n_hidden_nodes).to(self.__device)
         H_TH = torch.matmul(H_T, H) 
-        H_THI = pinv(H_TH + ident / self.__penalty)
-        self.__beta = torch.matmul(torch.matmul(H_THI, H_T), train_data)
+        H_THI = H_TH + ident / self.__penalty
+        H_THI_H_T = lstsq(H_THI, H_T).solution
+        self.__beta = torch.matmul(H_THI_H_T, train_data)
 
     """
     Predict the output of ELM-AE for equal representations based on the input data
@@ -83,7 +84,7 @@ class ELMAE(nn.Module):
         assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
         assert_cond(H.shape[0] == train_data.shape[0], "Hidden layer shape does not match the train data")
 
-        self.__beta = torch.matmul(pinv(H), train_data)
+        self.__beta = lstsq(H, train_data).solution
         b_Tb = torch.round(torch.round(torch.matmul(self.__beta, self.__beta)))
         assert_cond(torch.allclose(b_Tb, torch.eye(self.__n_input_nodes).to(self.__device)), "Output layer parameters are not orthogonal")
 
