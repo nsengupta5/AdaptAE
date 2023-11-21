@@ -9,6 +9,7 @@ import time
 import warnings
 import matplotlib.pyplot as plt
 
+NUM_IMAGES = 5
 # Constants
 DEVICE = (
     "cuda"
@@ -87,7 +88,7 @@ def load_and_split_data(dataset):
     train_size = len(train_data)
     test_size = len(test_data)
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = train_size, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = test_size, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = test_size, shuffle = False)
     logging.info(f"Loading and preparing data complete.")
     return train_loader, test_loader, input_nodes, hidden_nodes
 
@@ -176,7 +177,7 @@ Visualize the original and reconstructed images
 :param dataset: The dataset used
 :param n: The number of images to visualize
 """
-def visualize_comparisons(originals, reconstructions, dataset, n=5):
+def visualize_comparisons(originals, reconstructions, dataset, n=NUM_IMAGES):
     plt.figure(figsize=(20, 4))
     for i in range(n):
         # Display original images

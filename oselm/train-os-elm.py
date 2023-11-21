@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 TRAIN_SIZE_PROP = 0.8
 SEQ_SIZE_PROP = 0.2
 DEFAULT_BATCH_SIZE = 20
+NUM_IMAGES = 5
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -95,7 +96,7 @@ def load_and_split_data(dataset, mode, batch_size = 1):
 
     train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
     seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = False)
     logging.info(f"Loading and preparing data complete.")
     return train_loader, seq_loader, test_loader, input_nodes, hidden_nodes
 
@@ -206,7 +207,7 @@ def test_model(model, test_loader, dataset, mode):
             outputs.append((data, pred))
         if not saved_img:
             if mode == "sample":
-                if len(outputs) > 5:
+                if len(outputs) > NUM_IMAGES:
                     full_data = torch.cat([data for (data, _) in outputs], dim=0)
                     full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
                     visualize_comparisons(full_data.cpu().numpy(), full_pred.cpu().detach().numpy(), dataset)
@@ -239,7 +240,7 @@ Visualize the original and reconstructed images
 :param dataset: The dataset used
 :param n: The number of images to visualize
 """
-def visualize_comparisons(originals, reconstructions, dataset, n=5):
+def visualize_comparisons(originals, reconstructions, dataset, n=NUM_IMAGES):
     plt.figure(figsize=(20, 4))
     for i in range(n): # Display original images
         ax = plt.subplot(2, n, i + 1)

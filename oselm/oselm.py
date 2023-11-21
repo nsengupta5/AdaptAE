@@ -71,8 +71,11 @@ class OSELM(nn.Module):
 
         H_T = torch.transpose(H, 0, 1)
         self.__p = pinv(torch.matmul(H_T, H))
+        del H
         pH_T = torch.matmul(self.__p, H_T)
+        del H_T
         self.__beta = torch.matmul(pH_T, data)
+        del pH_T
         return self.__beta
 
     """
@@ -111,6 +114,7 @@ class OSELM(nn.Module):
         PH_T = torch.matmul(self.__p, H_T)
         I = torch.eye(batch_size).to(self.__device)
         HPH_T_Inv = pinv(torch.matmul(H, torch.matmul(self.__p, H_T)) + I)
+        del I
         HP = torch.matmul(H, self.__p)
         self.__p -= torch.matmul(torch.matmul(PH_T, HPH_T_Inv), HP)
 

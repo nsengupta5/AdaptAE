@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 BATCH_SIZE = 64
 NUM_EPOCHS = 50
+NUM_IMAGES = 5
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -70,7 +71,7 @@ def load_data(dataset):
             raise ValueError(f"Invalid dataset: {dataset}")
 
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = BATCH_SIZE, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = BATCH_SIZE, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = BATCH_SIZE, shuffle = False)
     logging.info(f"Loading and preparing data complete.")
     return train_loader, test_loader, input_nodes, hidden_nodes
 
@@ -207,7 +208,7 @@ Visualize the original and reconstructed images
 :param dataset: The dataset used
 :param n: The number of images to visualize
 """
-def visualize_comparisons(dataset, originals, reconstructions, n=5):
+def visualize_comparisons(dataset, originals, reconstructions, n=NUM_IMAGES):
     plt.figure(figsize=(20, 4))
     for i in range(n):
         # Display original images
