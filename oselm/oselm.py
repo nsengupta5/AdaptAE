@@ -92,11 +92,10 @@ class OSELM(nn.Module):
             self.calc_p_batch(batch_size, H, H_T)
             self.calc_beta_batch(data, H, H_T)
         elif mode == "sample":
-            H = H.unsqueeze(1)
             H_T = torch.transpose(H, 0, 1)
-            assert_cond(H_T.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
-            self.calc_p_sample(H, H_T)
-            self.calc_beta_sample(data, H, H_T)
+            assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
+            self.calc_p_sample(H_T, H)
+            self.calc_beta_sample(data, H_T, H)
         else:
             raise ValueError("Mode not supported")
 

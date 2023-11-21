@@ -177,9 +177,10 @@ Test the OSELM model on the test data
 :param model: The OSELM model
 :param test_data: The test data
 """
-def test_model(model, test_loader, dataset):
+def test_model(model, test_loader, dataset, mode):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
     losses = []
+    outputs = []
     saved_img = False
     for (data, _) in test_loader:
         # Reshape the data to fit the model
@@ -187,9 +188,18 @@ def test_model(model, test_loader, dataset):
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         losses.append(loss.item())
+        if mode == "sample":
+            outputs.append((data, pred))
         if not saved_img:
-            visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset)
-            saved_img = True
+            if mode == "sample":
+                if len(outputs) > 5:
+                    full_data = torch.cat([data for (data, _) in outputs], dim=0)
+                    full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
+                    visualize_comparisons(full_data.cpu().numpy(), full_pred.cpu().detach().numpy(), dataset)
+                    saved_img = True
+            else:
+                visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset)
+                saved_img = True
 
     loss = sum(losses) / len(losses)
     title = "Total Loss:"
@@ -307,7 +317,7 @@ def main():
     print(f"Memory used during total training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Total training complete. Time taken: {training_time:.2f} seconds.\n")
     logging.info(f"Total training complete")
-    test_model(model, test_loader, dataset)
+    test_model(model, test_loader, dataset, mode)
 
 if __name__ == "__main__":
     main()
