@@ -11,9 +11,8 @@ import warnings
 import matplotlib.pyplot as plt
 
 # Constants
-TRAIN_SIZE_PROP = 0.6
+TRAIN_SIZE_PROP = 0.8
 SEQ_SIZE_PROP = 0.2
-TEST_SIZE_PROP = 0.2
 DEFAULT_BATCH_SIZE = 20
 DEVICE = (
     "cuda"
@@ -49,17 +48,20 @@ def load_and_split_data(dataset, mode, batch_size = 1):
     match dataset:
         case 'mnist':
             transform = transforms.ToTensor()
-            data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.MNIST(root = './data', train = False, download = True, transform = transform)
         case 'fashion-mnist':
             transform = transforms.ToTensor()
-            data = datasets.FashionMNIST(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.FashionMNIST(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.FashionMNIST(root = './data', train = False, download = True, transform = transform)
         case 'cifar10':
             transform = transforms.Compose([
                 transforms.ToTensor(),
                 # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.CIFAR10(root = './data', train = False, download = True, transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
         case 'cifar100':
@@ -68,17 +70,29 @@ def load_and_split_data(dataset, mode, batch_size = 1):
                 # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.CIFAR100(root = './data', train = False, download = True, transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
+        case 'tiny-imagenet':
+            transform = transforms.Compose([
+                transforms.Resize((64,64)),
+                transforms.ToTensor(),
+                # Normalize each channel of the input data
+                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+            ])
+            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
+            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
+            input_nodes = 12288
+            hidden_nodes = 4096
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
-    # Split 60% for training, 20% for sequential training and 20% for testing
-    train_size = int(TRAIN_SIZE_PROP * len(data))
-    seq_size = int(SEQ_SIZE_PROP * len(data))
-    test_size = len(data) - train_size - seq_size
-    train_data, seq_data, test_data = random_split(data, [train_size, seq_size, test_size])
+    # Split 60% for training, 20% for sequential training
+    train_size = int(TRAIN_SIZE_PROP * len(train_data))
+    seq_size = int(SEQ_SIZE_PROP * len(train_data))
+    train_data, seq_data = random_split(train_data, [train_size, seq_size])
+
     train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
     seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
     test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = True)
@@ -231,8 +245,10 @@ def visualize_comparisons(originals, reconstructions, dataset, n=5):
         ax = plt.subplot(2, n, i + 1)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(originals[i].reshape(28, 28))
-        else:
+        elif dataset in ["cifar10", "cifar100"]:
             plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        else:
+            plt.imshow(originals[i].reshape(3, 64, 64).transpose(1, 2, 0))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
@@ -240,8 +256,10 @@ def visualize_comparisons(originals, reconstructions, dataset, n=5):
         ax = plt.subplot(2, n, i + 1 + n)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(reconstructions[i].reshape(28, 28))
-        else:
+        elif dataset in ["cifar10", "cifar100"]:
             plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        else:
+            plt.imshow(reconstructions[i].reshape(3, 64, 64).transpose(1, 2, 0))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
@@ -260,7 +278,7 @@ def get_mode():
         return argv[1]
 
 """
-Get the dataset to use (either "mnist", "fashion-mnist", "cifar10" or "cifar100")
+Get the dataset to use (either "mnist", "fashion-mnist", "cifar10", "cifar100", or "tiny-imagenet")
 :param mode: The mode of sequential training (either "sample" or "batch")
 """
 def get_dataset(mode):
@@ -268,7 +286,7 @@ def get_dataset(mode):
     if len(argv) < arg_len + 1:
         # Default to MNIST datasets
         return "mnist"
-    elif argv[arg_len] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
+    elif argv[arg_len] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet"]:
         exit_with_error()
     else:
         return argv[arg_len]
@@ -284,7 +302,7 @@ def get_batch_size(mode):
         try:
             return int(argv[2])
         except:
-            if argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
+            if argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet"]:
                 exit_with_error()
             else:
                 return DEFAULT_BATCH_SIZE

@@ -2,7 +2,6 @@ from elmae import ELMAE
 from torchvision import datasets, transforms
 from torch.backends import mps
 from torch import cuda
-from torch.utils.data import random_split
 from sys import argv
 import torch
 import logging
@@ -11,8 +10,6 @@ import warnings
 import matplotlib.pyplot as plt
 
 # Constants
-TRAIN_SIZE_PROP = 0.8
-TEST_SIZE_PROP = 0.2
 DEVICE = (
     "cuda"
     if cuda.is_available()
@@ -47,17 +44,20 @@ def load_and_split_data(dataset):
     match dataset:
         case 'mnist':
             transform = transforms.ToTensor()
-            data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.MNIST(root = './data', train = False, download = True, transform = transform)
         case 'fashion-mnist':
             transform = transforms.ToTensor()
-            data = datasets.FashionMNIST(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.FashionMNIST(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.FashionMNIST(root = './data', train = False, download = True, transform = transform)
         case 'cifar10':
             transform = transforms.Compose([
                 transforms.ToTensor(),
                 # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.CIFAR10(root = './data', train = False, download = True, transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
         case 'cifar100':
@@ -66,16 +66,26 @@ def load_and_split_data(dataset):
                 # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
+            train_data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
+            test_data = datasets.CIFAR100(root = './data', train = False, download = True, transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
+        case 'tiny-imagenet':
+            transform = transforms.Compose([
+                transforms.Resize((64,64)),
+                transforms.ToTensor(),
+                # Normalize each channel of the input data
+                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+            ])
+            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
+            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
+            input_nodes = 12288
+            hidden_nodes = 4096
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
-    # Split 80% for training and 20% for testing
-    train_size = int(TRAIN_SIZE_PROP * len(data))
-    test_size = len(data) - train_size
-    train_data, test_data = random_split(data, [train_size, test_size])
+    train_size = len(train_data)
+    test_size = len(test_data)
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = train_size, shuffle = True)
     test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = test_size, shuffle = True)
     logging.info(f"Loading and preparing data complete.")
@@ -173,8 +183,10 @@ def visualize_comparisons(originals, reconstructions, dataset, n=5):
         ax = plt.subplot(2, n, i + 1)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(originals[i].reshape(28, 28))
-        else:
+        elif dataset in ["cifar10", "cifar100"]:
             plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        else:
+            plt.imshow(originals[i].reshape(3, 64, 64).transpose(1, 2, 0))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
@@ -182,21 +194,23 @@ def visualize_comparisons(originals, reconstructions, dataset, n=5):
         ax = plt.subplot(2, n, i + 1 + n)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(reconstructions[i].reshape(28, 28))
-        else:
+        elif dataset in ["cifar10", "cifar100"]:
             plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        else:
+            plt.imshow(reconstructions[i].reshape(3, 64, 64).transpose(1, 2, 0))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
     plt.savefig(f"elmae/results/{dataset}-reconstructions.png")
 
 """
-Get the dataset to use (either "mnist", "fashion-mnist", "cifar10" or "cifar100")
+Get the dataset to use (either "mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet")
 """
 def get_dataset():
     if len(argv) < 2:
         # Default to MNIST datasets
         return "mnist"
-    elif argv[1] not in ["mnist", "fashion-mnist", "cifar10", "cifar100"]:
+    elif argv[1] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet"]:
         exit_with_error()
     else:
         return argv[1]
