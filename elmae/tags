@@ -51,6 +51,8 @@ input_shape	elmae.py	/^    def input_shape(self):$/;"	m	class:ELMAE
 load_and_split_data	train-elm-ae.py	/^def load_and_split_data(dataset):$/;"	f
 main	train-elm-ae.py	/^def main():$/;"	f
 orthogonalize_hidden_params	elmae.py	/^    def orthogonalize_hidden_params(self):$/;"	m	class:ELMAE
+plt	train-elm-ae.py	/^import matplotlib.pyplot as plt$/;"	I	nameref:module:matplotlib.pyplot
 predict	elmae.py	/^    def predict(self, test_data):$/;"	m	class:ELMAE
-test_model	train-elm-ae.py	/^def test_model(model, test_data):$/;"	f
-train_model	train-elm-ae.py	/^def train_model(model, train_data):$/;"	f
+test_model	train-elm-ae.py	/^def test_model(model, test_loader, dataset):$/;"	f
+train_model	train-elm-ae.py	/^def train_model(model, train_loader):$/;"	f
+visualize_comparisons	train-elm-ae.py	/^def visualize_comparisons(originals, reconstructions, dataset, n=5):$/;"	f

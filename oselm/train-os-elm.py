@@ -8,6 +8,7 @@ from sys import argv
 import logging
 import time
 import warnings
+import matplotlib.pyplot as plt
 
 # Constants
 TRAIN_SIZE_PROP = 0.6
@@ -176,15 +177,20 @@ Test the OSELM model on the test data
 :param model: The OSELM model
 :param test_data: The test data
 """
-def test_model(model, test_loader):
+def test_model(model, test_loader, dataset):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
     losses = []
+    saved_img = False
     for (data, _) in test_loader:
         # Reshape the data to fit the model
         data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         losses.append(loss.item())
+        if not saved_img:
+            visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset)
+            saved_img = True
+
     loss = sum(losses) / len(losses)
     title = "Total Loss:"
     print(f"\n{title}")
@@ -201,6 +207,35 @@ def exit_with_error():
     print("dataset: mnist, fashion-mnist, cifar10 or cifar100")
     print("batch size: integer (only required for batch mode and defaults to 20 if not provided)")
     exit(1)
+
+"""
+Visualize the original and reconstructed images
+:param originals: The original images
+:param reconstructions: The reconstructed images
+:param dataset: The dataset used
+:param n: The number of images to visualize
+"""
+def visualize_comparisons(originals, reconstructions, dataset, n=5):
+    plt.figure(figsize=(20, 4))
+    for i in range(n): # Display original images
+        ax = plt.subplot(2, n, i + 1)
+        if dataset in ["mnist", "fashion-mnist"]:
+            plt.imshow(originals[i].reshape(28, 28))
+        else:
+            plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        # Display reconstructed images
+        ax = plt.subplot(2, n, i + 1 + n)
+        if dataset in ["mnist", "fashion-mnist"]:
+            plt.imshow(reconstructions[i].reshape(28, 28))
+        else:
+            plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    plt.savefig(f"oselm/results/{dataset}-reconstructions.png")
 
 """
 Get the mode of sequential training (either "sample" or "batch")
@@ -272,7 +307,7 @@ def main():
     print(f"Memory used during total training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Total training complete. Time taken: {training_time:.2f} seconds.\n")
     logging.info(f"Total training complete")
-    test_model(model, test_loader)
+    test_model(model, test_loader, dataset)
 
 if __name__ == "__main__":
     main()

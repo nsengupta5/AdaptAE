@@ -122,8 +122,7 @@ class OSELM(nn.Module):
     :param H_T: The transpose of the hidden layer output matrix
     """
     def calc_beta_batch(self, batch, H, H_T):
-        T = torch.transpose(batch, 0, 1)
-        THB = T - torch.matmul(H, self.__beta)
+        THB = batch - torch.matmul(H, self.__beta)
         self.__beta += torch.matmul(torch.matmul(self.__p, H_T), THB)
 
     """
