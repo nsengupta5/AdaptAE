@@ -76,7 +76,7 @@ def train_model(dataset, model, data_loader):
     # Time and CUDA memory tracking
     start_time = time.time()
     initial_memory = torch.cuda.memory_allocated()
-    peak_memory = torch.cuda.max_memory_allocated()
+    torch.cuda.reset_peak_memory_stats()
 
     logging.info(f"Training on {len(data_loader)} batches...")
     losses = []

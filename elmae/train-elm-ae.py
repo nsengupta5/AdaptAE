@@ -30,9 +30,9 @@ def elmae_init(input_nodes, hidden_nodes):
     loss_func = 'mse'
     model = ELMAE(activation_func, loss_func, input_nodes, hidden_nodes, DEVICE).to(DEVICE)
     # Orthogonalize the hidden parameters
-    logging.info(f"Orthogonalizing hidden parameters...")
-    model.orthogonalize_hidden_params()
-    logging.info(f"Orthogonalizing hidden parameters complete.")
+    # logging.info(f"Orthogonalizing hidden parameters...")
+    # model.orthogonalize_hidden_params()
+    # logging.info(f"Orthogonalizing hidden parameters complete.")
     logging.info(f"Initializing ELMAE model complete.")
     return model
 
@@ -97,6 +97,7 @@ def train_model(model, train_loader):
         start_time = time.time()
         # Initial memory usage
         initial_memory = torch.cuda.memory_allocated()
+        torch.cuda.reset_peak_memory_stats()
 
         # Train the model
         model.calc_beta_sparse(data)

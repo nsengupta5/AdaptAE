@@ -100,7 +100,7 @@ def train_init(model, train_loader):
         # Time and CUDA memory tracking
         start_time = time.time()
         initial_memory = torch.cuda.memory_allocated()
-        peak_memory = torch.cuda.max_memory_allocated()
+        torch.cuda.reset_peak_memory_stats()
 
         model.init_phase(data)
         end_time = time.time()
@@ -132,7 +132,7 @@ def train_sequential(model, seq_loader, mode):
     # Time and CUDA memory tracking
     start_time = time.time()
     initial_memory = torch.cuda.memory_allocated()
-    peak_memory = torch.cuda.max_memory_allocated()
+    torch.cuda.reset_peak_memory_stats()
 
     # Metrics for each iteration
     sample_times = []
@@ -301,7 +301,7 @@ def main():
     # Time and CUDA memory tracking
     start_time = time.time()
     initial_memory = torch.cuda.memory_allocated()
-    peak_memory = torch.cuda.max_memory_allocated()
+    torch.cuda.reset_peak_memory_stats()
 
     train_init(model, train_loader)
     train_sequential(model, seq_loader, mode)
