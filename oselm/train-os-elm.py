@@ -203,17 +203,17 @@ def test_model(model, test_loader, dataset, mode):
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         losses.append(loss.item())
-        if mode == "sample":
+        if mode == "sample" or test_loader.batch_size < NUM_IMAGES:
             outputs.append((data, pred))
         if not saved_img:
-            if mode == "sample":
+            if mode == "sample" or test_loader.batch_size < NUM_IMAGES:
                 if len(outputs) > NUM_IMAGES:
                     full_data = torch.cat([data for (data, _) in outputs], dim=0)
                     full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
-                    visualize_comparisons(full_data.cpu().numpy(), full_pred.cpu().detach().numpy(), dataset)
+                    visualize_comparisons(full_data.cpu().numpy(), full_pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
                     saved_img = True
             else:
-                visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset)
+                visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
                 saved_img = True
 
     loss = sum(losses) / len(losses)
@@ -240,7 +240,7 @@ Visualize the original and reconstructed images
 :param dataset: The dataset used
 :param n: The number of images to visualize
 """
-def visualize_comparisons(originals, reconstructions, dataset, n=NUM_IMAGES):
+def visualize_comparisons(originals, reconstructions, dataset, batch_size, n=NUM_IMAGES):
     plt.figure(figsize=(20, 4))
     for i in range(n): # Display original images
         ax = plt.subplot(2, n, i + 1)
@@ -264,7 +264,10 @@ def visualize_comparisons(originals, reconstructions, dataset, n=NUM_IMAGES):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
-    plt.savefig(f"oselm/results/{dataset}-reconstructions.png")
+    if batch_size == 1:
+        plt.savefig(f"oselm/results/{dataset}-reconstructions-sample.png")
+    else:
+        plt.savefig(f"oselm/results/{dataset}-reconstructions-batch-{batch_size}.png")
 
 """
 Get the mode of sequential training (either "sample" or "batch")

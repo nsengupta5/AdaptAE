@@ -10,7 +10,7 @@ import time
 import matplotlib.pyplot as plt
 
 BATCH_SIZE = 64
-NUM_EPOCHS = 50
+NUM_EPOCHS = 30
 NUM_IMAGES = 5
 DEVICE = (
     "cuda"
