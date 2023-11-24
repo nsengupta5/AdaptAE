@@ -12,6 +12,8 @@ This project makes use of the following datasets:
 
 - **CIFAR-100**: 60,000 32x32 color images, but across 100 classes containing 600 images each
 
+- **Tiny ImageNet**: 100,000 64x64 color images across 200 classes, with 500 images per class, divided into 80,000 training images, 10,000 validation images, and 10,000 test images.
+
 ### Usage
 
 To run a vanilla autoencoder:
