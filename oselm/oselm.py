@@ -28,8 +28,6 @@ class OSELM(nn.Module):
 
         self.__p = torch.zeros(n_hidden_nodes, n_hidden_nodes).to(device)
         self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)
-        self.__u = nn.Parameter(torch.zeros(n_hidden_nodes, n_hidden_nodes))
-        self.__v = nn.Parameter(torch.zeros(n_hidden_nodes, n_input_nodes))
         self.__device = device
 
     """
@@ -94,11 +92,15 @@ class OSELM(nn.Module):
             batch_size = data.shape[0]
             self.calc_p_batch(batch_size, H, H_T)
             self.calc_beta_batch(data, H, H_T)
+            del H
+            del H_T
         elif mode == "sample":
             H_T = torch.transpose(H, 0, 1)
             assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
             self.calc_p_sample(H_T, H)
             self.calc_beta_sample(data, H_T, H)
+            del H
+            del H_T
         else:
             raise ValueError("Mode not supported")
 
@@ -141,7 +143,6 @@ class OSELM(nn.Module):
             PHH_TP = torch.matmul(PHH_T, self.__p)
             del PHH_T
             H_TPH = torch.matmul(H_T, torch.matmul(self.__p, H))
-            del H_T
             self.__p -= torch.div(PHH_TP, 1 + H_TPH)
 
     """
@@ -154,27 +155,6 @@ class OSELM(nn.Module):
             THB = sample - torch.matmul(H_T, self.__beta)
             PH_T = torch.matmul(self.__p, H)
             self.__beta += torch.matmul(PH_T, THB)
-
-    """
-    Calculate the intermediate u of the network as part of E^2LM
-    """
-    def calc_interm_u(self):
-        self.__u = pinv(self.__p)
-
-    """
-    Calculate the intermediate v of the network as part of E^2LM
-    """
-    def calc_interm_v(self):
-        self.__v = torch.matmul(self.__u, self.__beta)
-
-    """
-    Integrate the intermediate u and v from another network into this network as part of E^2LM
-    """
-    def integrate(self, u, v):
-        self.__u += u
-        self.__v += v
-        self.__p = pinv(self.__u)
-        self.__beta = torch.matmul(pinv(self.__u), self.__v)
 
     """
     Return the input shape of the network
