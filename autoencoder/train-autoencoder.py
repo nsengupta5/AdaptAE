@@ -12,13 +12,6 @@ import matplotlib.pyplot as plt
 BATCH_SIZE = 64
 NUM_EPOCHS = 30
 NUM_IMAGES = 5
-DEVICE = (
-    "cuda"
-    if cuda.is_available()
-    else "mps"
-    if mps.is_available()
-    else "cpu"
-)
 
 """
 Load the data
@@ -96,7 +89,7 @@ def train_model(dataset, model, data_loader):
         loss = 0
         epoch_start_time = time.time()
         for (img, _) in data_loader:
-            img = img.reshape(-1, model.input_shape[0]).to(DEVICE)
+            img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
             train_loss = criterion(recon, img)
 
@@ -138,7 +131,7 @@ def test_model(dataset, model, data_loader):
     saved_img = False
     with torch.no_grad():
         for (img, _) in data_loader:
-            img = img.reshape(-1, model.input_shape[0]).to(DEVICE)
+            img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
             loss = criterion(recon, img)
             total_loss += loss.item()
@@ -163,6 +156,18 @@ def get_dataset():
         return argv[1]
     else:
         exit_with_usage()
+
+"""
+Get the device to use (either "cpu", "mpu" or "cuda")
+"""
+def get_device():
+    if len(argv) < 3:
+        # Default to CPU
+        return "cuda"
+    elif argv[2] not in ["cpu", "mpu", "cuda"]:
+        exit_with_usage()
+    else:
+        return argv[2]
 
 """
 Exit with usage message
@@ -238,10 +243,12 @@ def visualize_comparisons(dataset, originals, reconstructions, n=NUM_IMAGES):
 
 def main():
     logging.basicConfig(level=logging.INFO)
+    global device
+    device = get_device()
     dataset = get_dataset()
     train_loader, test_loader, input_nodes, hidden_nodes = load_data(dataset)
     logging.info("Initializing the autoencoder model...")
-    model = Autoencoder(input_nodes, hidden_nodes).to(DEVICE)
+    model = Autoencoder(input_nodes, hidden_nodes).to(device)
     logging.info("Initializing complete.")
     train_model(dataset, model, train_loader)
     test_model(dataset, model, test_loader)

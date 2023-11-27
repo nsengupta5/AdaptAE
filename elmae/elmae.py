@@ -1,5 +1,5 @@
 import torch
-from torch import nn
+import torch.nn as nn
 from torch.linalg import lstsq
 import logging
 from torch.nn.functional import normalize
@@ -62,6 +62,10 @@ class ELMAE(nn.Module):
     def calc_beta_sparse(self, train_data):
         # Assert that the input data shape matches the input nodes
         assert_cond(train_data.shape[1] == self.__n_input_nodes, "Train data shape does not match the input nodes")
+
+        # train_data = torch.quantize_per_tensor(train_data, 0.1, 0, torch.qint8)
+        # alpha = torch.quantize_per_tensor(self.__alpha, 0.1, 0, torch.qint8)
+
         H = self.__activation_func(torch.matmul(train_data, self.__alpha) + self.__bias)
         assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
         assert_cond(H.shape[0] == train_data.shape[0], "Hidden layer shape does not match the train data")
@@ -101,6 +105,13 @@ class ELMAE(nn.Module):
         self.__bias.data = normalize(self.__bias, dim=0)
         b_Tb = torch.round(torch.matmul(self.__bias, self.__bias))
         assert_cond(b_Tb == 1, "Hidden layer bias is not normalized")
+
+    """
+    Prepare for quantization
+    """
+    def prepare_for_quantization(self):
+        self.qconfig = torch.quantization.get_default_qconfig('fbgemm')
+        self = torch.quantization.prepare(self, inplace=True)
 
     """
     Return the input shape of the network

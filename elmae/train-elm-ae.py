@@ -9,15 +9,8 @@ import time
 import warnings
 import matplotlib.pyplot as plt
 
-NUM_IMAGES = 5
 # Constants
-DEVICE = (
-    "cuda"
-    if cuda.is_available()
-    else "mps"
-    if mps.is_available()
-    else "cpu"
-)
+NUM_IMAGES = 5
 
 """
 Initialize the ELMAE model
@@ -26,7 +19,7 @@ def elmae_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing ELMAE model...")
     activation_func = 'sigmoid'
     loss_func = 'mse'
-    model = ELMAE(activation_func, loss_func, input_nodes, hidden_nodes, DEVICE).to(DEVICE)
+    model = ELMAE(activation_func, loss_func, input_nodes, hidden_nodes, device).to(device)
     # Orthogonalize the hidden parameters
     # logging.info(f"Orthogonalizing hidden parameters...")
     # model.orthogonalize_hidden_params()
@@ -100,7 +93,7 @@ Train the model
 def train_model(model, train_loader):
     for (data, _) in train_loader:
         # Reshape the data
-        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         logging.info(f"Training on {len(data)} samples...")
         logging.info("Train data shape: " + str(data.shape))
 
@@ -109,6 +102,11 @@ def train_model(model, train_loader):
         # Initial memory usage
         initial_memory = torch.cuda.memory_allocated()
         torch.cuda.reset_peak_memory_stats()
+
+        # Prepare model for quantization
+        model.prepare_for_quantization()
+
+        model = torch.quantization.convert(model, inplace = True)
 
         # Train the model
         model.calc_beta_sparse(data)
@@ -146,7 +144,7 @@ Test the model
 def test_model(model, test_loader, dataset):
     for (data, _) in test_loader:
         # Reshape the data
-        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         logging.info(f"Testing on {len(data)} samples...")
         logging.info("Test data shape: " + str(data.shape))
         pred = model.predict(data)
@@ -216,8 +214,22 @@ def get_dataset():
     else:
         return argv[1]
 
+"""
+Get the device to use (either "cpu", "mps" or "cuda")
+"""
+def get_device():
+    if len(argv) < 3:
+        # Default to CPU
+        return "cuda"
+    elif argv[2] not in ["cpu", "mps", "cuda"]:
+        exit_with_error()
+    else:
+        return argv[2]
+
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
+    global device
+    device = get_device()
     dataset = get_dataset()
     logging.basicConfig(level=logging.INFO)
     train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset)

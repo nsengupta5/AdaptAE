@@ -15,13 +15,6 @@ TRAIN_SIZE_PROP = 0.8
 SEQ_SIZE_PROP = 0.2
 DEFAULT_BATCH_SIZE = 20
 NUM_IMAGES = 5
-DEVICE = (
-    "cuda"
-    if cuda.is_available()
-    else "mps"
-    if mps.is_available()
-    else "cpu"
-)
 
 """
 Initialize the OSELM model
@@ -31,7 +24,7 @@ def oselm_init(input_nodes, hidden_nodes):
     activation_func = 'sigmoid'
     loss_func = 'mse'
     logging.info(f"Initializing OSELM model complete.")
-    return OSELM(activation_func, loss_func, input_nodes, hidden_nodes, DEVICE).to(DEVICE)
+    return OSELM(activation_func, loss_func, input_nodes, hidden_nodes, device).to(device)
 
 """
 Load and split the data into training, sequential and test data
@@ -108,7 +101,7 @@ Initialize the OSELM model with the initial training data
 def train_init(model, train_loader):
     for (data, _) in train_loader:
         # Reshape the data to fit the model
-        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         logging.info(f"Initial training on {len(data)} samples...")
         logging.info("Train data shape: " + str(data.shape))
 
@@ -155,7 +148,7 @@ def train_sequential(model, seq_loader, mode):
     total_loss = 0
     for (data, _) in seq_loader:
         # Reshape the data to fit the model
-        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         sample_start_time = time.time()
         sample_initial_memory = torch.cuda.memory_allocated()
 
@@ -199,7 +192,7 @@ def test_model(model, test_loader, dataset, mode):
     saved_img = False
     for (data, _) in test_loader:
         # Reshape the data to fit the model
-        data = data.reshape(-1, model.input_shape[0]).float().to(DEVICE)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         losses.append(loss.item())
@@ -227,10 +220,11 @@ def test_model(model, test_loader, dataset, mode):
 Exit the program with an error message of the correct usage
 """
 def exit_with_error():
-    print("Usage: python train-os-elm.py [mode] <batch size> [dataset]")
+    print("Usage: python train-os-elm.py [mode] <batch size> [dataset] <device>")
     print("mode: sample or batch")
     print("dataset: mnist, fashion-mnist, cifar10 or cifar100")
     print("batch size: integer (only required for batch mode and defaults to 20 if not provided)")
+    print("device: cpu, mps or cuda (defaults to cpu if not provided)")
     exit(1)
 
 """
@@ -310,11 +304,26 @@ def get_batch_size(mode):
                 exit_with_error()
             else:
                 return DEFAULT_BATCH_SIZE
+
+"""
+Get the device to use (either "cpu", "mps" or "cuda")
+"""
+def get_device(mode):
+    arg_len = 3 if mode == "sample" else 4
+    if len(argv) < arg_len + 1:
+        # Default to CPU
+        return "cuda"
+    elif argv[arg_len] not in ["cpu", "mps", "cuda"]:
+        exit_with_error()
+    else:
+        return argv[arg_len]
         
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
+    global device
     mode = get_mode()
     dataset = get_dataset(mode)
+    device = get_device(mode)
     batch_size = get_batch_size(mode)
     logging.basicConfig(level=logging.INFO)
     train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size)
