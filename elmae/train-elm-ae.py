@@ -1,7 +1,5 @@
 from elmae import ELMAE
 from torchvision import datasets, transforms
-from torch.backends import mps
-from torch import cuda
 from sys import argv
 import torch
 import logging
@@ -66,15 +64,15 @@ def load_and_split_data(dataset):
             hidden_nodes = 1024
         case 'tiny-imagenet':
             transform = transforms.Compose([
-                transforms.Resize((64,64)),
+                transforms.Resize((32,32)),
                 transforms.ToTensor(),
                 # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
             train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
             test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
-            input_nodes = 12288
-            hidden_nodes = 4096
+            input_nodes = 3072
+            hidden_nodes = 1024
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
