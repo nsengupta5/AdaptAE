@@ -6,6 +6,7 @@ import logging
 from sys import argv
 import time
 import matplotlib.pyplot as plt
+import psutil
 
 BATCH_SIZE = 64
 NUM_EPOCHS = 30
@@ -76,13 +77,17 @@ def train_model(dataset, model, data_loader):
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
     # Time and CUDA memory tracking
-    start_time = time.time()
-    initial_memory = torch.cuda.memory_allocated()
-    torch.cuda.reset_peak_memory_stats()
+    peak_memory = 0
+    process = None
+    if device == 'cuda':
+        torch.cuda.reset_peak_memory_stats()
+    elif device == 'cpu':
+        process = psutil.Process()
 
     logging.info(f"Training on {len(data_loader)} batches...")
     losses = []
     times = []
+    start_time = time.time()
     for epoch in range(NUM_EPOCHS):
         loss = 0
         epoch_start_time = time.time()
@@ -98,19 +103,25 @@ def train_model(dataset, model, data_loader):
 
         epoch_end_time = time.time()
         loss /= len(data_loader)
+
+        if device == "cpu":
+            curr_memory = process.memory_info().rss
+            peak_memory = max(peak_memory, curr_memory)
+
         losses.append(loss)
         times.append(epoch_end_time - epoch_start_time)
         print(f"Epoch: {epoch+1}/{NUM_EPOCHS}, Loss: {loss:.5f}")
 
     end_time = time.time()
     training_time = end_time - start_time
-    final_memory = torch.cuda.memory_allocated()
-    peak_memory = torch.cuda.max_memory_allocated()
+
+    if device == 'cuda':
+        peak_memory = torch.cuda.max_memory_allocated()
+
     title = "Training Benchmarks"
     print(f"\n{title}")
     print("=" * len(title))
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-    print(f"Memory used during training: {(final_memory - initial_memory) / (1024 ** 2):.2f} MB")
     print(f"Training complete. Time taken: {training_time:.2f} seconds.\n")
 
     # Create plots

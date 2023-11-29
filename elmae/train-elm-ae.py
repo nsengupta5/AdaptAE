@@ -6,6 +6,7 @@ import logging
 import time
 import warnings
 import matplotlib.pyplot as plt
+import psutil
 
 # Constants
 NUM_IMAGES = 5
@@ -89,22 +90,28 @@ Train the model
 :param train_data: The training data
 """
 def train_model(model, train_loader):
+    peak_memory = 0
+    process = None
+
     for (data, _) in train_loader:
         # Reshape the data
         data = data.reshape(-1, model.input_shape[0]).float().to(device)
         logging.info(f"Training on {len(data)} samples...")
         logging.info("Train data shape: " + str(data.shape))
 
-        # Start time tracking
-        start_time = time.time()
-        # Initial memory usage
-        initial_memory = torch.cuda.memory_allocated()
-        torch.cuda.reset_peak_memory_stats()
-
         # Prepare model for quantization
         model.prepare_for_quantization()
-
         model = torch.quantization.convert(model, inplace = True)
+
+        # Reset peak memory stats
+        if device == "cuda":
+            torch.cuda.reset_peak_memory_stats()
+        else:
+            process = psutil.Process()
+            peak_memory = process.memory_info().rss
+
+        # Start time tracking
+        start_time = time.time()
 
         # Train the model
         model.calc_beta_sparse(data)
@@ -113,18 +120,19 @@ def train_model(model, train_loader):
         end_time = time.time()
 
         # Final memory usage
-        final_memory = torch.cuda.memory_allocated()
-        peak_memory = torch.cuda.max_memory_allocated()
+        if device == "cuda":
+            peak_memory = torch.cuda.max_memory_allocated()
+        else:
+            current_memory = process.memory_info().rss
+            peak_memory = max(peak_memory, current_memory)
 
         # Calculate time taken and memory used
         time_taken = end_time - start_time
-        memory_used = final_memory - initial_memory
         
         title = "Training Benchmarks:"
         print(f"\n{title}")
         print("=" * len(title))
         print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-        print(f"Memory used during training: {memory_used / (1024 ** 2):.2f} MB")
         print(f"Training complete. Time taken: {time_taken:.2f} seconds.")
 
         # Evaluate the model
