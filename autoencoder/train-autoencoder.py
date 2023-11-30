@@ -173,7 +173,7 @@ def get_dataset():
     if len(argv) < 2:
         # Default to MNIST
         return 'mnist'
-    elif argv[1] in ['mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'tiny-imagenet']:
+    elif argv[1] in ['mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'super-tiny-imagenet' ,'tiny-imagenet']:
         return argv[1]
     else:
         exit_with_usage()

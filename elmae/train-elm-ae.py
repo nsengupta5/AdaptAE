@@ -233,7 +233,7 @@ def get_dataset():
     if len(argv) < 2:
         # Default to MNIST datasets
         return "mnist"
-    elif argv[1] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet"]:
+    elif argv[1] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"]:
         exit_with_error()
     else:
         return argv[1]

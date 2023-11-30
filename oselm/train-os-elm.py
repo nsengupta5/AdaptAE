@@ -337,7 +337,7 @@ def get_mode():
         return argv[1]
 
 """
-Get the dataset to use (either "mnist", "fashion-mnist", "cifar10", "cifar100", or "tiny-imagenet")
+Get the dataset to use (either "mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet" or "tiny-imagenet")
 :param mode: The mode of sequential training (either "sample" or "batch")
 """
 def get_dataset(mode):
@@ -345,7 +345,7 @@ def get_dataset(mode):
     if len(argv) < arg_len + 1:
         # Default to MNIST datasets
         return "mnist"
-    elif argv[arg_len] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet"]:
+    elif argv[arg_len] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"]:
         exit_with_error()
     else:
         return argv[arg_len]
@@ -361,7 +361,7 @@ def get_batch_size(mode):
         try:
             return int(argv[2])
         except:
-            if argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet"]:
+            if argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"]:
                 exit_with_error()
             else:
                 return DEFAULT_BATCH_SIZE
