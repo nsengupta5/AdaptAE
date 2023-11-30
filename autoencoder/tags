@@ -36,14 +36,15 @@
 !_TAG_ROLE_DESCRIPTION!Python!unknown	indirectlyImported	/classes\/variables\/functions\/modules imported in alternative name/
 Autoencoder	autoencoder.py	/^class Autoencoder(nn.Module):$/;"	c
 BATCH_SIZE	train-autoencoder.py	/^BATCH_SIZE = 64$/;"	v
-DEVICE	train-autoencoder.py	/^DEVICE = ($/;"	v
-NUM_EPOCHS	train-autoencoder.py	/^NUM_EPOCHS = 50$/;"	v
-TRAIN_SIZE_PROP	train-autoencoder.py	/^TRAIN_SIZE_PROP=0.8$/;"	v
+DEBUG	train-autoencoder.py	/^DEBUG = True$/;"	v
+NUM_EPOCHS	train-autoencoder.py	/^NUM_EPOCHS = 30$/;"	v
+NUM_IMAGES	train-autoencoder.py	/^NUM_IMAGES = 5$/;"	v
 __init__	autoencoder.py	/^    def __init__(self, n_input_nodes, n_hidden_nodes):$/;"	m	class:Autoencoder
 create_plots	train-autoencoder.py	/^def create_plots(dataset, losses, times):$/;"	f
 exit_with_usage	train-autoencoder.py	/^def exit_with_usage():$/;"	f
 forward	autoencoder.py	/^    def forward(self, x):$/;"	m	class:Autoencoder
 get_dataset	train-autoencoder.py	/^def get_dataset():$/;"	f
+get_device	train-autoencoder.py	/^def get_device():$/;"	f
 hidden_shape	autoencoder.py	/^    def hidden_shape(self):$/;"	m	class:Autoencoder
 input_shape	autoencoder.py	/^    def input_shape(self):$/;"	m	class:Autoencoder
 load_data	train-autoencoder.py	/^def load_data(dataset):$/;"	f
@@ -53,4 +54,4 @@ nn	train-autoencoder.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
 plt	train-autoencoder.py	/^import matplotlib.pyplot as plt$/;"	I	nameref:module:matplotlib.pyplot
 test_model	train-autoencoder.py	/^def test_model(dataset, model, data_loader):$/;"	f
 train_model	train-autoencoder.py	/^def train_model(dataset, model, data_loader):$/;"	f
-visualize_comparisons	train-autoencoder.py	/^def visualize_comparisons(dataset, originals, reconstructions, n=5):$/;"	f
+visualize_comparisons	train-autoencoder.py	/^def visualize_comparisons(dataset, originals, reconstructions, n=NUM_IMAGES):$/;"	f

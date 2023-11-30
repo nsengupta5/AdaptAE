@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.linalg import lstsq
-import logging
 from torch.nn.functional import normalize
+import logging
 
 class ELMAE(nn.Module):
 
@@ -67,11 +67,10 @@ class ELMAE(nn.Module):
         assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
         assert_cond(H.shape[0] == train_data.shape[0], "Hidden layer shape does not match the train data")
 
-        H_T = torch.transpose(H, 0, 1)
         ident = torch.eye(self.__n_hidden_nodes).to(self.__device)
-        H_TH = torch.matmul(H_T, H) 
+        H_TH = torch.matmul(H.T, H) 
         H_THI = H_TH + ident / self.__penalty
-        H_THI_H_T = lstsq(H_THI, H_T).solution
+        H_THI_H_T = lstsq(H_THI, H.T).solution
         
         self.__beta = torch.matmul(H_THI_H_T, train_data)
 
@@ -103,13 +102,6 @@ class ELMAE(nn.Module):
         self.__bias.data = normalize(self.__bias, dim=0)
         b_Tb = torch.round(torch.matmul(self.__bias, self.__bias))
         assert_cond(b_Tb == 1, "Hidden layer bias is not normalized")
-
-    """
-    Prepare for quantization
-    """
-    def prepare_for_quantization(self):
-        self.qconfig = torch.quantization.get_default_qconfig('fbgemm')
-        self = torch.quantization.prepare(self, inplace=True)
 
     """
     Return the input shape of the network

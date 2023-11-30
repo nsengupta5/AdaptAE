@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.linalg import pinv
+from torch.linalg import lstsq, pinv
 import logging
 
 class OSELM(nn.Module):
@@ -67,11 +67,9 @@ class OSELM(nn.Module):
         assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
         assert_cond(H.shape[0] == data.shape[0], "Hidden layer shape does not match number of samples")
 
-        H_T = torch.transpose(H, 0, 1)
-        self.__p = pinv(torch.matmul(H_T, H))
+        self.__p = pinv(torch.matmul(H.T, H))
+        pH_T = torch.matmul(self.__p, H.T)
         del H
-        pH_T = torch.matmul(self.__p, H_T)
-        del H_T
         self.__beta = torch.matmul(pH_T, data)
         del pH_T
         return self.__beta
@@ -86,21 +84,15 @@ class OSELM(nn.Module):
         H = self.__activation_func(torch.matmul(data, self.__alpha) + self.__bias)
 
         if mode == "batch":
-            H_T = torch.transpose(H, 0, 1)
             assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
             assert_cond(data.shape[1] == self.__n_input_nodes, "Input data shape does not match the input nodes")
             batch_size = data.shape[0]
-            self.calc_p_batch(batch_size, H, H_T)
-            self.calc_beta_batch(data, H, H_T)
-            del H
-            del H_T
+            self.calc_p_batch(batch_size, H, H.T)
+            self.calc_beta_batch(data, H, H.T)
         elif mode == "sample":
-            H_T = torch.transpose(H, 0, 1)
             assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
-            self.calc_p_sample(H_T, H)
-            self.calc_beta_sample(data, H_T, H)
-            del H
-            del H_T
+            self.calc_p_sample(H.T, H)
+            self.calc_beta_sample(data, H.T, H)
         else:
             raise ValueError("Mode not supported")
 

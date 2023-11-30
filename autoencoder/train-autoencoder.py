@@ -11,6 +11,7 @@ import psutil
 BATCH_SIZE = 64
 NUM_EPOCHS = 30
 NUM_IMAGES = 5
+DEBUG = True
 
 """
 Load the data
@@ -48,7 +49,7 @@ def load_data(dataset):
             test_data = datasets.CIFAR100(root = './data', train = False, download = True, transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
-        case 'tiny-imagenet':
+        case 'super-tiny-imagenet':
             transform = transforms.Compose([
                 transforms.Resize((32,32)),
                 transforms.ToTensor(),
@@ -59,6 +60,17 @@ def load_data(dataset):
             test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
+        case 'tiny-imagenet':
+            transform = transforms.Compose([
+                transforms.Resize((64,64)),
+                transforms.ToTensor(),
+                # Normalize each channel of the input data
+                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+            ])
+            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
+            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
+            input_nodes = 12288
+            hidden_nodes = 4096
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
@@ -229,7 +241,7 @@ def visualize_comparisons(dataset, originals, reconstructions, n=NUM_IMAGES):
         ax = plt.subplot(2, n, i + 1)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(originals[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100"]:
+        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
         else:
             plt.imshow(originals[i].reshape(3, 64, 64).transpose(1, 2, 0))
@@ -240,7 +252,7 @@ def visualize_comparisons(dataset, originals, reconstructions, n=NUM_IMAGES):
         ax = plt.subplot(2, n, i + 1 + n)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(reconstructions[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100"]:
+        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
         else:
             plt.imshow(reconstructions[i].reshape(3, 64, 64).transpose(1, 2, 0))

@@ -1,5 +1,6 @@
 from elmae import ELMAE
 from torchvision import datasets, transforms
+from torch.profiler import profile, record_function, ProfilerActivity
 from sys import argv
 import torch
 import logging
@@ -10,6 +11,7 @@ import psutil
 
 # Constants
 NUM_IMAGES = 5
+DEBUG = False
 
 """
 Initialize the ELMAE model
@@ -63,7 +65,7 @@ def load_and_split_data(dataset):
             test_data = datasets.CIFAR100(root = './data', train = False, download = True, transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
-        case 'tiny-imagenet':
+        case 'super-tiny-imagenet':
             transform = transforms.Compose([
                 transforms.Resize((32,32)),
                 transforms.ToTensor(),
@@ -74,6 +76,17 @@ def load_and_split_data(dataset):
             test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
+        case 'tiny-imagenet':
+            transform = transforms.Compose([
+                transforms.Resize((64,64)),
+                transforms.ToTensor(),
+                # Normalize each channel of the input data
+                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+            ])
+            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
+            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
+            input_nodes = 12288
+            hidden_nodes = 4096
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
@@ -99,10 +112,6 @@ def train_model(model, train_loader):
         logging.info(f"Training on {len(data)} samples...")
         logging.info("Train data shape: " + str(data.shape))
 
-        # Prepare model for quantization
-        model.prepare_for_quantization()
-        model = torch.quantization.convert(model, inplace = True)
-
         # Reset peak memory stats
         if device == "cuda":
             torch.cuda.reset_peak_memory_stats()
@@ -113,8 +122,16 @@ def train_model(model, train_loader):
         # Start time tracking
         start_time = time.time()
 
-        # Train the model
-        model.calc_beta_sparse(data)
+        if DEBUG:
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True, profile_memory=True) as prof:
+            # Train the model
+                with record_function("model.train"):
+                    model.calc_beta_sparse(data)
+
+            # sort by CUDA memory usage
+            print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10))
+        else:
+            model.calc_beta_sparse(data)
 
         # End time tracking
         end_time = time.time()
@@ -125,6 +142,7 @@ def train_model(model, train_loader):
         else:
             current_memory = process.memory_info().rss
             peak_memory = max(peak_memory, current_memory)
+
 
         # Calculate time taken and memory used
         time_taken = end_time - start_time
@@ -188,7 +206,7 @@ def visualize_comparisons(originals, reconstructions, dataset, n=NUM_IMAGES):
         ax = plt.subplot(2, n, i + 1)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(originals[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100"]:
+        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
         else:
             plt.imshow(originals[i].reshape(3, 64, 64).transpose(1, 2, 0))
@@ -199,7 +217,7 @@ def visualize_comparisons(originals, reconstructions, dataset, n=NUM_IMAGES):
         ax = plt.subplot(2, n, i + 1 + n)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(reconstructions[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100"]:
+        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
         else:
             plt.imshow(reconstructions[i].reshape(3, 64, 64).transpose(1, 2, 0))

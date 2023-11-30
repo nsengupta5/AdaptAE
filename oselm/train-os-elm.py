@@ -2,6 +2,7 @@ from oselm import OSELM
 import torch
 from torchvision import datasets, transforms
 from torch.utils.data import random_split
+from torch.profiler import profile, record_function, ProfilerActivity
 from sys import argv
 import logging
 import time
@@ -10,10 +11,11 @@ import matplotlib.pyplot as plt
 import psutil
 
 # Constants
-TRAIN_SIZE_PROP = 0.8
-SEQ_SIZE_PROP = 0.2
+TRAIN_SIZE_PROP = 0.01
+SEQ_SIZE_PROP = 0.99
 DEFAULT_BATCH_SIZE = 20
 NUM_IMAGES = 5
+DEBUG = False
 
 """
 Initialize the OSELM model
@@ -67,7 +69,7 @@ def load_and_split_data(dataset, mode, batch_size = 1):
             test_data = datasets.CIFAR100(root = './data', train = False, download = True, transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
-        case 'tiny-imagenet':
+        case 'super-tiny-imagenet':
             transform = transforms.Compose([
                 transforms.Resize((32,32)),
                 transforms.ToTensor(),
@@ -78,6 +80,17 @@ def load_and_split_data(dataset, mode, batch_size = 1):
             test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
             input_nodes = 3072
             hidden_nodes = 1024
+        case 'tiny-imagenet':
+            transform = transforms.Compose([
+                transforms.Resize((64,64)),
+                transforms.ToTensor(),
+                # Normalize each channel of the input data
+                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+            ])
+            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
+            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
+            input_nodes = 12288
+            hidden_nodes = 4096
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
@@ -115,7 +128,16 @@ def train_init(model, train_loader):
             process = psutil.Process()
             peak_memory = process.memory_info().rss 
 
-        model.init_phase(data)
+        if DEBUG:
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True, profile_memory=True) as prof:
+            # Train the model
+                with record_function("model_init_train"):
+                    model.init_phase(data)
+
+            print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10))
+        else:
+            model.init_phase(data)
+
         end_time = time.time()
 
         if device == "cuda":
@@ -159,27 +181,51 @@ def train_sequential(model, seq_loader, mode):
         peak_memory = process.memory_info().rss
 
     start_time = time.time()
-    for (data, _) in seq_loader:
-        # Reshape the data to fit the model
-        data = data.reshape(-1, model.input_shape[0]).float().to(device)
-        sample_start_time = time.time()
+    if DEBUG:
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack = True, profile_memory = True) as prof:
+            with record_function("model.seq_phase"):
+                for (data, _) in seq_loader:
+                    # Reshape the data to fit the model
+                    data = data.reshape(-1, model.input_shape[0]).float().to(device)
+                    sample_start_time = time.time()
 
-        model.seq_phase(data, mode)
+                    model.seq_phase(data, mode)
 
-        sample_end_time = time.time()
+                    sample_end_time = time.time()
 
-        if device == "cpu":
-            current_memory = process.memory_info().rss
-            peak_memory = max(peak_memory, current_memory)
+                    if device == "cpu":
+                        current_memory = process.memory_info().rss
+                        peak_memory = max(peak_memory, current_memory)
 
-        sample_times.append(sample_end_time - sample_start_time)
+                    sample_times.append(sample_end_time - sample_start_time)
 
-        pred = model.predict(data)
-        loss, _ = model.evaluate(data, pred)
-        total_loss += loss.item()
+                    pred = model.predict(data)
+                    loss, _ = model.evaluate(data, pred)
+                    total_loss += loss.item()
 
-    end_time = time.time()
+        print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10))
+    else:
+        for (data, _) in seq_loader:
+            # Reshape the data to fit the model
+            data = data.reshape(-1, model.input_shape[0]).float().to(device)
+            sample_start_time = time.time()
+
+            model.seq_phase(data, mode)
+
+            sample_end_time = time.time()
+
+            if device == "cpu":
+                current_memory = process.memory_info().rss
+                peak_memory = max(peak_memory, current_memory)
+
+            sample_times.append(sample_end_time - sample_start_time)
+
+            pred = model.predict(data)
+            loss, _ = model.evaluate(data, pred)
+            total_loss += loss.item()
     
+    end_time = time.time()
+
     if device == "cuda":
         peak_memory = torch.cuda.max_memory_allocated()
 
@@ -255,7 +301,7 @@ def visualize_comparisons(originals, reconstructions, dataset, batch_size, n=NUM
         ax = plt.subplot(2, n, i + 1)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(originals[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100"]:
+        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
         else:
             plt.imshow(originals[i].reshape(3, 64, 64).transpose(1, 2, 0))
@@ -266,7 +312,7 @@ def visualize_comparisons(originals, reconstructions, dataset, batch_size, n=NUM
         ax = plt.subplot(2, n, i + 1 + n)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(reconstructions[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100"]:
+        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
         else:
             plt.imshow(reconstructions[i].reshape(3, 64, 64).transpose(1, 2, 0))
