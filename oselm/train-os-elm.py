@@ -9,13 +9,15 @@ import time
 import warnings
 import matplotlib.pyplot as plt
 import psutil
+import csv
 
 # Constants
-TRAIN_SIZE_PROP = 0.01
-SEQ_SIZE_PROP = 0.99
 DEFAULT_BATCH_SIZE = 20
+DEFAULT_SEQ_PROP = 0.99
 NUM_IMAGES = 5
 DEBUG = False
+
+result_data = []
 
 """
 Initialize the OSELM model
@@ -33,7 +35,7 @@ param dataset: The dataset to load
 param mode: The mode to load the data in
 param batch_size: The batch size to use (default sample)
 """
-def load_and_split_data(dataset, mode, batch_size = 1):
+def load_and_split_data(dataset, mode, batch_size = 1, seq_prop = 0.2):
     logging.info(f"Loading and preparing data...")
     transform = transforms.ToTensor()
     input_nodes = 784
@@ -95,8 +97,8 @@ def load_and_split_data(dataset, mode, batch_size = 1):
             raise ValueError(f"Invalid dataset: {dataset}")
 
     # Split 60% for training, 20% for sequential training
-    train_size = int(TRAIN_SIZE_PROP * len(train_data))
-    seq_size = int(SEQ_SIZE_PROP * len(train_data))
+    seq_size = int(seq_prop * len(train_data))
+    train_size = len(train_data) - seq_size
     train_data, seq_data = random_split(train_data, [train_size, seq_size])
 
     train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
@@ -141,22 +143,28 @@ def train_init(model, train_loader):
         end_time = time.time()
 
         if device == "cuda":
-            peak_memory = torch.cuda.max_memory_allocated()
+            peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)
         else:
             current_memory = process.memory_info().rss
-            peak_memory = max(peak_memory, current_memory)
+            peak_memory = max(peak_memory, current_memory) / (1024 ** 2)
 
         training_time = end_time - start_time
         title = "Initial Training Benchmarks"
         print("\n" + title)
         print("=" * len(title))
-        print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-        print(f"Initial Training complete. Time taken: {training_time:.2f} seconds.\n")
+        print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
+        print(f"Time taken: {training_time:.2f} seconds.")
 
         # Evaluate the model on the initial training data
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         print(f"Initial training loss: {loss:.2f}")
+
+        # Saving results
+        result_data.append(training_time)
+        result_data.append(round(peak_memory, 2))
+        result_data.append(float(str(f"{loss:.3f}")))
+
         logging.info(f"Initial training complete")
 
 """
@@ -227,7 +235,7 @@ def train_sequential(model, seq_loader, mode):
     end_time = time.time()
 
     if device == "cuda":
-        peak_memory = torch.cuda.max_memory_allocated()
+        peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)
 
     training_time = end_time - start_time
     sample_avg_time = sum(sample_times) / len(sample_times)
@@ -235,10 +243,16 @@ def train_sequential(model, seq_loader, mode):
     title = "Sequential Training Benchmarks"
     print(f"\n{title}:")
     print("=" * len(title))
-    print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+    print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
     print(f"Average time per sample: {sample_avg_time:.5f} seconds")
     print(f"Average Loss: {total_loss / len(seq_loader):.2f}")
-    print(f"Sequential training complete. Time taken: {training_time:.2f} seconds.\n")
+    print(f"Time taken: {training_time:.2f} seconds.\n")
+
+    # Saving results
+    result_data.append(training_time)
+    result_data.append(round(peak_memory, 2))
+    result_data.append(float(str(f"{(total_loss / len(seq_loader)):3f}")))
+
     logging.info(f"Sequential training complete")
 
 """
@@ -259,22 +273,26 @@ def test_model(model, test_loader, dataset, mode):
         losses.append(loss.item())
         if mode == "sample" or test_loader.batch_size < NUM_IMAGES:
             outputs.append((data, pred))
-        if not saved_img:
-            if mode == "sample" or test_loader.batch_size < NUM_IMAGES:
-                if len(outputs) > NUM_IMAGES:
-                    full_data = torch.cat([data for (data, _) in outputs], dim=0)
-                    full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
-                    visualize_comparisons(full_data.cpu().numpy(), full_pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
-                    saved_img = True
-            else:
-                visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
-                saved_img = True
+        # if not saved_img:
+        #     if mode == "sample" or test_loader.batch_size < NUM_IMAGES:
+        #         if len(outputs) > NUM_IMAGES:
+        #             full_data = torch.cat([data for (data, _) in outputs], dim=0)
+        #             full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
+        #             visualize_comparisons(full_data.cpu().numpy(), full_pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
+        #             saved_img = True
+        #     else:
+        #         visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
+        #         saved_img = True
 
     loss = sum(losses) / len(losses)
     title = "Total Loss:"
     print(f"\n{title}")
     print("=" * len(title))
     print(f"Loss: {loss:.5f}\n")
+
+    # Saving results
+    result_data.append(float(str(f"{loss:.5f}")))
+
     logging.info(f"Testing complete.")
 
 """
@@ -378,6 +396,27 @@ def get_device(mode):
         exit_with_error()
     else:
         return argv[arg_len]
+
+"""
+Get the sequential training data proportion
+"""
+def get_seq_prop(mode):
+    arg_len = 4 if mode == "sample" else 5
+    if len(argv) < arg_len + 1:
+        # Default to 0.5
+        return DEFAULT_SEQ_PROP
+    elif float(argv[arg_len]) <= 0 or float(argv[arg_len]) >= 1:
+        exit_with_error()
+    else:
+        return float(argv[arg_len])
+
+"""
+Save the results to a CSV file
+"""
+def save_result_data(dataset):
+    with open (f'oselm/data/seq_prop_{dataset}_performance.csv', 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(result_data)
         
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
@@ -386,41 +425,16 @@ def main():
     dataset = get_dataset(mode)
     device = get_device(mode)
     batch_size = get_batch_size(mode)
+    seq_prop = get_seq_prop(mode)
+    result_data.append(seq_prop)
     logging.basicConfig(level=logging.INFO)
-    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size)
+    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop)
     model = oselm_init(input_nodes, hidden_nodes)
-
-    # Time and CUDA memory tracking
-    peak_memory = 0
-    process = None
-    if device == "cuda":
-        torch.cuda.reset_peak_memory_stats()
-    else:
-        process = psutil.Process()
-        peak_memory = process.memory_info().rss
-
-    start_time = time.time()
 
     train_init(model, train_loader)
     train_sequential(model, seq_loader, mode)
-
-    end_time = time.time()
-
-    if device == "cuda":
-        peak_memory = torch.cuda.max_memory_allocated()
-    else:
-        current_memory = process.memory_info().rss
-        peak_memory = max(peak_memory, current_memory)
-
-    training_time = end_time - start_time
-
-    title = "Total Training Benchmarks:"
-    print(f"\n{title}")
-    print("=" * len(title))
-    print(f"Peak memory allocated during total training: {peak_memory / (1024 ** 2):.2f} MB")
-    print(f"Total training complete. Time taken: {training_time:.2f} seconds.\n")
-    logging.info(f"Total training complete")
     test_model(model, test_loader, dataset, mode)
+    save_result_data(dataset)
 
 if __name__ == "__main__":
     main()
