@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.linalg import lstsq, pinv
+from torch.linalg import pinv
 import logging
 
 class OSELM(nn.Module):

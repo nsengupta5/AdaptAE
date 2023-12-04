@@ -125,20 +125,37 @@ def plot_loss_vs_batch(data):
     plt.savefig('plots/oselm/batch_size_vs_loss.png')
     pass
 
+def plot_time_vs_all(data):
+    # Plot for Time␍
+    fig = plt.figure(figsize=(18, 6))
+    ax3 = fig.add_subplot(133, projection='3d')
+    ax3.scatter(data['Sequential Prop'], data['Batch Size'], data['Sequential Time'], c='g', marker='o')
+    ax3.set_xlabel('Sequential Prop')
+    ax3.set_ylabel('Batch Size')
+    ax3.set_zlabel('Sequential Time')
+    ax3.set_title('Effect of Sequential Prop and Batch Size on Time')
+    
+    plt.tight_layout()
+    plt.savefig('plots/oselm/total_vs_time.png')
+
 def main():
-    # Reading data from csv file
-    data = pd.read_csv('oselm/data/seq_prop_fashion-mnist_performance.csv')
+    # # Reading data from csv file
+    # data = pd.read_csv('oselm/data/seq_prop_fashion-mnist_performance.csv')
 
-    # Plotting the data
-    plot_time_vs_prop(data)
-    plot_peak_memory_vs_prop(data)
-    plot_loss_vs_prop(data)
+    # # Plotting the data
+    # plot_time_vs_prop(data)
+    # plot_peak_memory_vs_prop(data)
+    # plot_loss_vs_prop(data)
 
-    data = pd.read_csv('oselm/data/batch_size_fashion-mnist_performance.csv')
+    # data = pd.read_csv('oselm/data/batch_size_fashion-mnist_performance.csv')
 
-    plot_time_vs_batch(data)
-    plot_peak_memory_vs_batch(data)
-    plot_loss_vs_batch(data)
+    # plot_time_vs_batch(data)
+    # plot_peak_memory_vs_batch(data)
+    # plot_loss_vs_batch(data)
+
+    data = pd.read_csv('oselm/data/total_cifar100_performance.csv')
+
+    plot_time_vs_all(data)
 
 if __name__ == '__main__':
     main()

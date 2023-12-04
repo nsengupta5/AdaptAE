@@ -414,7 +414,7 @@ def get_seq_prop(mode):
 Save the results to a CSV file
 """
 def save_result_data(dataset):
-    with open (f'oselm/data/seq_prop_{dataset}_performance.csv', 'a', newline='') as f:
+    with open (f'oselm/data/total_{dataset}_performance.csv', 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(result_data)
         
@@ -426,6 +426,7 @@ def main():
     device = get_device(mode)
     batch_size = get_batch_size(mode)
     seq_prop = get_seq_prop(mode)
+    result_data.append(batch_size)
     result_data.append(seq_prop)
     logging.basicConfig(level=logging.INFO)
     train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop)
