@@ -2,20 +2,18 @@ from oselm import OSELM
 import torch
 from torchvision import datasets, transforms
 from torch.utils.data import random_split
-from torch.profiler import profile, record_function, ProfilerActivity
-from sys import argv
 import logging
 import time
 import warnings
 import matplotlib.pyplot as plt
 import psutil
 import csv
+import argparse
 
 # Constants
-DEFAULT_BATCH_SIZE = 20
+DEFAULT_BATCH_SIZE = 10
 DEFAULT_SEQ_PROP = 0.99
 NUM_IMAGES = 5
-DEBUG = False
 
 result_data = []
 
@@ -111,8 +109,9 @@ def load_and_split_data(dataset, mode, batch_size = 1, seq_prop = 0.2):
 Initialize the OSELM model with the initial training data
 :param model: The OSELM model
 :param train_data: The initial training data
+:param phased: Whether to ignore the initial training performance
 """
-def train_init(model, train_loader):
+def train_init(model, train_loader, phased):
     peak_memory = 0
     process = None
 
@@ -122,37 +121,33 @@ def train_init(model, train_loader):
         logging.info(f"Initial training on {len(data)} samples...")
         logging.info("Train data shape: " + str(data.shape))
 
-        # Time and CUDA memory tracking
+        # Don't reset the peak memory if we're monitoring total memory
+        if phased:
+            if device == "cuda":
+                torch.cuda.reset_peak_memory_stats()
+            else:
+                process = psutil.Process()
+                peak_memory = process.memory_info().rss 
+
         start_time = time.time()
-        if device == "cuda":
-            torch.cuda.reset_peak_memory_stats()
-        else:
-            process = psutil.Process()
-            peak_memory = process.memory_info().rss 
 
-        if DEBUG:
-            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True, profile_memory=True) as prof:
-            # Train the model
-                with record_function("model_init_train"):
-                    model.init_phase(data)
-
-            print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10))
-        else:
-            model.init_phase(data)
+        model.init_phase(data)
 
         end_time = time.time()
 
-        if device == "cuda":
-            peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)
-        else:
-            current_memory = process.memory_info().rss
-            peak_memory = max(peak_memory, current_memory) / (1024 ** 2)
+        if phased:
+            if device == "cuda":
+                peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)
+            else:
+                current_memory = process.memory_info().rss
+                peak_memory = max(peak_memory, current_memory) / (1024 ** 2)
 
         training_time = end_time - start_time
         title = "Initial Training Benchmarks"
         print("\n" + title)
         print("=" * len(title))
-        print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
+        if phased:
+            print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
         print(f"Time taken: {training_time:.2f} seconds.")
 
         # Evaluate the model on the initial training data
@@ -161,9 +156,10 @@ def train_init(model, train_loader):
         print(f"Initial training loss: {loss:.2f}")
 
         # Saving results
-        result_data.append(training_time)
-        result_data.append(round(peak_memory, 2))
-        result_data.append(float(str(f"{loss:.3f}")))
+        if phased:
+            result_data.append(training_time)
+            result_data.append(round(peak_memory, 2))
+            result_data.append(float(str(f"{loss:.3f}")))
 
         logging.info(f"Initial training complete")
 
@@ -172,8 +168,9 @@ Train the OSELM model sequentially on the sequential training data
 :param model: The OSELM model
 :param seq_data: The sequential training data
 :param mode: The mode of sequential training, either "sample" or "batch"
+:param phased: Whether to ignore sequential training performance
 """
-def train_sequential(model, seq_loader, mode):
+def train_sequential(model, seq_loader, mode, phased):
     logging.info(f"Sequential training on {len(seq_loader)} batches in {mode} mode...")
     # Metrics for each iteration
     sample_times = []
@@ -182,60 +179,39 @@ def train_sequential(model, seq_loader, mode):
     # Time and CUDA memory tracking
     peak_memory = 0
     process = None
-    if device == "cuda":
-        torch.cuda.reset_peak_memory_stats()
-    else:
-        process = psutil.Process()
-        peak_memory = process.memory_info().rss
+    if phased:
+        if device == "cuda":
+            torch.cuda.reset_peak_memory_stats()
+        else:
+            process = psutil.Process()
+            peak_memory = process.memory_info().rss
 
     start_time = time.time()
-    if DEBUG:
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack = True, profile_memory = True) as prof:
-            with record_function("model.seq_phase"):
-                for (data, _) in seq_loader:
-                    # Reshape the data to fit the model
-                    data = data.reshape(-1, model.input_shape[0]).float().to(device)
-                    sample_start_time = time.time()
+    for (data, _) in seq_loader:
+        # Reshape the data to fit the model
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
+        sample_start_time = time.time()
 
-                    model.seq_phase(data, mode)
+        model.seq_phase(data, mode)
 
-                    sample_end_time = time.time()
+        sample_end_time = time.time()
 
-                    if device == "cpu":
-                        current_memory = process.memory_info().rss
-                        peak_memory = max(peak_memory, current_memory)
-
-                    sample_times.append(sample_end_time - sample_start_time)
-
-                    pred = model.predict(data)
-                    loss, _ = model.evaluate(data, pred)
-                    total_loss += loss.item()
-
-        print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=10))
-    else:
-        for (data, _) in seq_loader:
-            # Reshape the data to fit the model
-            data = data.reshape(-1, model.input_shape[0]).float().to(device)
-            sample_start_time = time.time()
-
-            model.seq_phase(data, mode)
-
-            sample_end_time = time.time()
-
+        if phased:
             if device == "cpu":
                 current_memory = process.memory_info().rss
                 peak_memory = max(peak_memory, current_memory)
 
-            sample_times.append(sample_end_time - sample_start_time)
+        sample_times.append(sample_end_time - sample_start_time)
 
-            pred = model.predict(data)
-            loss, _ = model.evaluate(data, pred)
-            total_loss += loss.item()
+        pred = model.predict(data)
+        loss, _ = model.evaluate(data, pred)
+        total_loss += loss.item()
     
     end_time = time.time()
 
-    if device == "cuda":
-        peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)
+    if phased:
+        if device == "cuda":
+            peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)
 
     training_time = end_time - start_time
     sample_avg_time = sum(sample_times) / len(sample_times)
@@ -243,24 +219,67 @@ def train_sequential(model, seq_loader, mode):
     title = "Sequential Training Benchmarks"
     print(f"\n{title}:")
     print("=" * len(title))
-    print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
+    if phased:
+        print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
     print(f"Average time per sample: {sample_avg_time:.5f} seconds")
     print(f"Average Loss: {total_loss / len(seq_loader):.2f}")
-    print(f"Time taken: {training_time:.2f} seconds.\n")
+    print(f"Time taken: {training_time:.2f} seconds.")
 
     # Saving results
-    result_data.append(training_time)
-    result_data.append(round(peak_memory, 2))
-    result_data.append(float(str(f"{(total_loss / len(seq_loader)):3f}")))
+    if phased:
+        result_data.append(training_time)
+        result_data.append(round(peak_memory, 2))
+        result_data.append(float(str(f"{(total_loss / len(seq_loader)):3f}")))
 
     logging.info(f"Sequential training complete")
+
+"""
+Train the model
+:param model: The model to train
+:param train_loader: The training data loader
+:param seq_loader: The sequential training data loader
+:param mode: The mode of sequential training
+:param device: The device to use
+:param phased: Whether to monitor the total performance of the model
+"""
+def train_model(model, train_loader, seq_loader, mode, device, phased):
+    peak_memory = 0
+    process = None
+    if not phased:
+        if device == "cuda":
+            torch.cuda.reset_peak_memory_stats()
+        else:
+            process = psutil.Process()
+            peak_memory = process.memory_info().rss
+
+    start_time = time.time()
+    train_init(model, train_loader, phased)
+    train_sequential(model, seq_loader, mode, phased)
+    end_time = time.time()
+
+    if not phased:
+        if device == "cuda":
+            peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)
+        else:
+            current_memory = process.memory_info().rss
+            peak_memory = max(peak_memory, current_memory) / (1024 ** 2)
+
+    training_time = end_time - start_time
+    title = "Total Training Benchmarks"
+    print("\n" + title)
+    print("=" * len(title))
+    if not phased:
+        print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
+        result_data.append(training_time)
+        result_data.append(round(peak_memory, 2))
+    print(f"Time taken: {training_time:.2f} seconds.")
 
 """
 Test the OSELM model on the test data
 :param model: The OSELM model
 :param test_data: The test data
 """
-def test_model(model, test_loader, dataset, mode):
+def test_model(model, test_loader, dataset, gen_imgs):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
     losses = []
     outputs = []
@@ -271,18 +290,29 @@ def test_model(model, test_loader, dataset, mode):
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         losses.append(loss.item())
-        if mode == "sample" or test_loader.batch_size < NUM_IMAGES:
+        if test_loader.batch_size < NUM_IMAGES:
             outputs.append((data, pred))
-        # if not saved_img:
-        #     if mode == "sample" or test_loader.batch_size < NUM_IMAGES:
-        #         if len(outputs) > NUM_IMAGES:
-        #             full_data = torch.cat([data for (data, _) in outputs], dim=0)
-        #             full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
-        #             visualize_comparisons(full_data.cpu().numpy(), full_pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
-        #             saved_img = True
-        #     else:
-        #         visualize_comparisons(data.cpu().numpy(), pred.cpu().detach().numpy(), dataset, test_loader.batch_size)
-        #         saved_img = True
+        if gen_imgs:
+            if not saved_img:
+                if test_loader.batch_size < NUM_IMAGES:
+                    if len(outputs) > NUM_IMAGES:
+                        full_data = torch.cat([data for (data, _) in outputs], dim=0)
+                        full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
+                        visualize_comparisons(
+                            full_data.cpu().numpy(), 
+                            full_pred.cpu().detach().numpy(), 
+                            dataset, 
+                            test_loader.batch_size
+                        )
+                        saved_img = True
+                else:
+                    visualize_comparisons(
+                        data.cpu().numpy(),
+                        pred.cpu().detach().numpy(),
+                        dataset,
+                        test_loader.batch_size
+                    )
+                    saved_img = True
 
     loss = sum(losses) / len(losses)
     title = "Total Loss:"
@@ -298,12 +328,9 @@ def test_model(model, test_loader, dataset, mode):
 """
 Exit the program with an error message of the correct usage
 """
-def exit_with_error():
-    print("Usage: python train-os-elm.py [mode] <batch size> [dataset] <device>")
-    print("mode: sample or batch")
-    print("dataset: mnist, fashion-mnist, cifar10 or cifar100")
-    print("batch size: integer (only required for batch mode and defaults to 20 if not provided)")
-    print("device: cpu, mps or cuda (defaults to cpu if not provided)")
+def exit_with_error(msg, parser):
+    logging.error(msg)
+    parser.print_help()
     exit(1)
 
 """
@@ -314,6 +341,7 @@ Visualize the original and reconstructed images
 :param n: The number of images to visualize
 """
 def visualize_comparisons(originals, reconstructions, dataset, batch_size, n=NUM_IMAGES):
+    logging.info(f"Generating {n} images...")
     plt.figure(figsize=(20, 4))
     for i in range(n): # Display original images
         ax = plt.subplot(2, n, i + 1)
@@ -337,105 +365,139 @@ def visualize_comparisons(originals, reconstructions, dataset, batch_size, n=NUM
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
+    logging.info(f"Saving images to oselm/results/ ...")
     if batch_size == 1:
         plt.savefig(f"oselm/results/{dataset}-reconstructions-sample.png")
     else:
         plt.savefig(f"oselm/results/{dataset}-reconstructions-batch-{batch_size}.png")
 
 """
-Get the mode of sequential training (either "sample" or "batch")
-"""
-def get_mode():
-    if len(argv) == 1:
-        # Default to sample mode
-        return "sample"
-    elif argv[1] not in ["sample", "batch"]:
-        exit_with_error()
-    else:
-        return argv[1]
-
-"""
-Get the dataset to use (either "mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet" or "tiny-imagenet")
-:param mode: The mode of sequential training (either "sample" or "batch")
-"""
-def get_dataset(mode):
-    arg_len = 2 if mode == "sample" else 3
-    if len(argv) < arg_len + 1:
-        # Default to MNIST datasets
-        return "mnist"
-    elif argv[arg_len] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"]:
-        exit_with_error()
-    else:
-        return argv[arg_len]
-
-"""
-Get the batch size to use
-:param mode: The mode of sequential training (either "sample" or "batch")
-"""
-def get_batch_size(mode):
-    if mode == "sample":
-        return 1
-    else:
-        try:
-            return int(argv[2])
-        except:
-            if argv[2] not in ["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"]:
-                exit_with_error()
-            else:
-                return DEFAULT_BATCH_SIZE
-
-"""
-Get the device to use (either "cpu", "mps" or "cuda")
-"""
-def get_device(mode):
-    arg_len = 3 if mode == "sample" else 4
-    if len(argv) < arg_len + 1:
-        # Default to CPU
-        return "cuda"
-    elif argv[arg_len] not in ["cpu", "mps", "cuda"]:
-        exit_with_error()
-    else:
-        return argv[arg_len]
-
-"""
-Get the sequential training data proportion
-"""
-def get_seq_prop(mode):
-    arg_len = 4 if mode == "sample" else 5
-    if len(argv) < arg_len + 1:
-        # Default to 0.5
-        return DEFAULT_SEQ_PROP
-    elif float(argv[arg_len]) <= 0 or float(argv[arg_len]) >= 1:
-        exit_with_error()
-    else:
-        return float(argv[arg_len])
-
-"""
 Save the results to a CSV file
 """
-def save_result_data(dataset):
-    with open (f'oselm/data/total_{dataset}_performance.csv', 'a', newline='') as f:
+def save_result_data(dataset, phased, result_strategy):
+    target_dir = "phased" if phased else "total"
+    with open (f'oselm/data/{target_dir}/{result_strategy}_{dataset}_performance.csv', 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(result_data)
-        
+
+""" 
+Get the arguments from the command line
+"""
+def get_args():
+    parser = argparse.ArgumentParser(description="Training an OS-ELM model")
+    # Define the arguments
+    parser.add_argument(
+        "--mode", 
+        type=str, 
+        choices=["sample", "batch"],
+        required=True,
+        help="The mode of sequential training (either 'sample' or 'batch')"
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"],
+        required=True,
+        help="The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')"
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        help="The batch size to use. Must be provided if using batch mode"
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        choices=["cpu", "mps", "cuda"],
+        default="cuda",
+        help="The device to use (either 'cpu', 'mps' or 'cuda')"
+    )
+    parser.add_argument(
+        "--seq-prop",
+        type=float,
+        default=DEFAULT_SEQ_PROP,
+        help="The sequential training data proportion. Must be between 0.01 and 0.99 inclusive"
+    )
+    parser.add_argument(
+        "--generate-imgs",
+        action="store_true",
+        help="Whether to generate images of the reconstructions"
+    )
+    parser.add_argument(
+        "--save-results",
+        action="store_true",
+        help="Whether to save the results to a CSV file"
+    )
+    parser.add_argument(
+        "--phased",
+        action="store_true",
+        help="Whether to monitor and save phased or total performance results"
+    )
+    parser.add_argument(
+        "--result-strategy",
+        type=str,
+        choices=["batch-size", "seq-prop", "total"],
+        help="If saving results, the independent variable to vary when saving results"
+    )
+
+    # Parse the arguments
+    args = parser.parse_args()
+    mode = args.mode
+    dataset = args.dataset
+    device = args.device
+    gen_imgs = args.generate_imgs
+    save_results = args.save_results
+    phased = args.phased
+    result_strategy = args.result_strategy
+
+    # Assume sample mode if no mode is specified
+    batch_size = 1
+    if args.mode == "batch": 
+        if args.batch_size is None:
+            batch_size = DEFAULT_BATCH_SIZE
+        else:
+            batch_size = args.batch_size
+    else:
+        if args.batch_size is not None:
+            # Batch size is not used in sample mode
+            exit_with_error("Batch size is not used in sample mode", parser)
+
+    seq_prop = DEFAULT_SEQ_PROP
+    if args.seq_prop is not None:
+        if args.seq_prop <= 0 or args.seq_prop >= 1:
+            # Sequential proportion must be between 0 and 1
+            exit_with_error("Sequential proportion must be between 0 and 1", parser)
+        else:
+            seq_prop = args.seq_prop
+
+    if args.save_results:
+        if args.result_strategy is None:
+            # Must specify a result strategy if saving result
+            exit_with_error("Must specify a result strategy if saving results", parser)
+
+    return mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy
+
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
     global device
-    mode = get_mode()
-    dataset = get_dataset(mode)
-    device = get_device(mode)
-    batch_size = get_batch_size(mode)
-    seq_prop = get_seq_prop(mode)
-    result_data.append(batch_size)
-    result_data.append(seq_prop)
+    global save_results
+    mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy = get_args()
+    if save_results:
+        match result_strategy:
+            case "batch-size":
+                result_data.append(batch_size)
+            case "seq-prop":
+                result_data.append(seq_prop)
+            case "total":
+                result_data.append(batch_size)
+                result_data.append(seq_prop)
     logging.basicConfig(level=logging.INFO)
     train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop)
     model = oselm_init(input_nodes, hidden_nodes)
-
-    train_init(model, train_loader)
-    train_sequential(model, seq_loader, mode)
-    test_model(model, test_loader, dataset, mode)
-    save_result_data(dataset)
+    train_model(model, train_loader, seq_loader, mode, device, phased)
+    test_model(model, test_loader, dataset, gen_imgs)
+    if save_results:
+        save_result_data(dataset, phased, result_strategy)
 
 if __name__ == "__main__":
     main()
