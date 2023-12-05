@@ -1,3 +1,4 @@
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -125,18 +126,60 @@ def plot_loss_vs_batch(data):
     plt.savefig('plots/oselm/batch_size_vs_loss.png')
     pass
 
-def plot_time_vs_all(data):
-    # Plot for Time␍
-    fig = plt.figure(figsize=(18, 6))
-    ax3 = fig.add_subplot(133, projection='3d')
-    ax3.scatter(data['Sequential Prop'], data['Batch Size'], data['Sequential Time'], c='g', marker='o')
-    ax3.set_xlabel('Sequential Prop')
-    ax3.set_ylabel('Batch Size')
-    ax3.set_zlabel('Sequential Time')
-    ax3.set_title('Effect of Sequential Prop and Batch Size on Time')
-    
-    plt.tight_layout()
-    plt.savefig('plots/oselm/total_vs_time.png')
+
+def plot_total_all_vs_peak_mem(data):
+    # Creating a 3D plot for Sequential Prop, Batch Size, and Peak Memory
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    x = data['Sequential Prop']
+    y = data['Batch Size']
+    z = data['Total Peak Memory']
+
+    ax.scatter(x, y, z, c='green', marker='o')
+
+    ax.set_xlabel('Sequential Prop')
+    ax.set_ylabel('Batch Size')
+    ax.set_zlabel('Total Peak Memory (MB)')
+
+    plt.title('3D Plot: Sequential Prop, Batch Size, and Peak Memory')
+    plt.show()
+
+def plot_total_all_vs_time(data):
+    # Creating a 3D plot for Sequential Prop, Batch Size, and Peak Memory
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    x = data['Sequential Prop']
+    y = data['Batch Size']
+    z = data['Total Time']
+
+    ax.scatter(x, y, z, c='green', marker='o')
+
+    ax.set_xlabel('Sequential Prop')
+    ax.set_ylabel('Batch Size')
+    ax.set_zlabel('Total Time (s)')
+
+    plt.title('3D Plot: Sequential Prop, Batch Size, and Training Time')
+    plt.show()
+
+def plot_total_all_vs_loss(data):
+    # Creating a 3D plot for Sequential Prop, Batch Size, and Peak Memory
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    x = data['Sequential Prop']
+    y = data['Batch Size']
+    z = data['Total Loss']
+
+    ax.scatter(x, y, z, c='green', marker='o')
+
+    ax.set_xlabel('Sequential Prop')
+    ax.set_ylabel('Batch Size')
+    ax.set_zlabel('Total Loss')
+
+    plt.title('3D Plot: Sequential Prop, Batch Size, and Loss')
+    plt.show()
 
 def main():
     # # Reading data from csv file
@@ -153,9 +196,11 @@ def main():
     # plot_peak_memory_vs_batch(data)
     # plot_loss_vs_batch(data)
 
-    data = pd.read_csv('oselm/data/total_cifar100_performance.csv')
+    data = pd.read_csv('oselm/data/total/total_cifar100_performance.csv')
 
-    plot_time_vs_all(data)
+    plot_total_all_vs_peak_mem(data)
+    plot_total_all_vs_time(data)
+    plot_total_all_vs_loss(data)
 
 if __name__ == '__main__':
     main()

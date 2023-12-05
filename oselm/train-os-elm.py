@@ -14,7 +14,6 @@ import argparse
 DEFAULT_BATCH_SIZE = 10
 DEFAULT_SEQ_PROP = 0.99
 NUM_IMAGES = 5
-
 result_data = []
 
 """
@@ -31,15 +30,24 @@ def oselm_init(input_nodes, hidden_nodes):
 Load and split the data into training, sequential and test data
 param dataset: The dataset to load
 param mode: The mode to load the data in
-param batch_size: The batch size to use (default sample)
+param batch_size: The batch size to use
+param seq_prop: The proportion of the data to use for sequential training
+return train_loader: The training data loader
+return seq_loader: The sequential training data loader
+return test_loader: The test data loader
+return input_nodes: The number of input nodes
+return hidden_nodes: The number of hidden nodes
 """
-def load_and_split_data(dataset, mode, batch_size = 1, seq_prop = 0.2):
+def load_and_split_data(dataset, mode, batch_size, seq_prop):
     logging.info(f"Loading and preparing data...")
     transform = transforms.ToTensor()
     input_nodes = 784
     hidden_nodes = 128
+
+    # Set the batch size to 1 if in sample mode
     if mode == "sample":
         batch_size = 1
+
     match dataset:
         case 'mnist':
             transform = transforms.ToTensor()
@@ -52,7 +60,6 @@ def load_and_split_data(dataset, mode, batch_size = 1, seq_prop = 0.2):
         case 'cifar10':
             transform = transforms.Compose([
                 transforms.ToTensor(),
-                # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
             train_data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
@@ -62,7 +69,6 @@ def load_and_split_data(dataset, mode, batch_size = 1, seq_prop = 0.2):
         case 'cifar100':
             transform = transforms.Compose([
                 transforms.ToTensor(),
-                # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
             train_data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
@@ -71,9 +77,9 @@ def load_and_split_data(dataset, mode, batch_size = 1, seq_prop = 0.2):
             hidden_nodes = 1024
         case 'super-tiny-imagenet':
             transform = transforms.Compose([
+                # Resize the images to 32x32 for smaller network
                 transforms.Resize((32,32)),
                 transforms.ToTensor(),
-                # Normalize each channel of the input data
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
             train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
@@ -94,14 +100,16 @@ def load_and_split_data(dataset, mode, batch_size = 1, seq_prop = 0.2):
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
-    # Split 60% for training, 20% for sequential training
+    # Split the training data into training and sequential data
     seq_size = int(seq_prop * len(train_data))
     train_size = len(train_data) - seq_size
     train_data, seq_data = random_split(train_data, [train_size, seq_size])
 
+    # Create the data loaders
     train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
     seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
     test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = False)
+
     logging.info(f"Loading and preparing data complete.")
     return train_loader, seq_loader, test_loader, input_nodes, hidden_nodes
 

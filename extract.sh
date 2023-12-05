@@ -65,7 +65,7 @@ if [ "$1" == "batch-size" ]; then
     exit 0
 fi
 
-if [ "$1" == "both" ]; then
+if [ "$1" == "all" ]; then
     # Print floating points from 0.1 to 0.9 with 0.1 increment
     for i in $(seq 0.05 0.05 0.95); do
         python oselm/train-os-elm.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy total
