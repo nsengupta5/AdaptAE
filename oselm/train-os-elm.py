@@ -2,36 +2,59 @@
 File: train-os-elm.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
-Last Modified: December 5, 2020
+Last Modified: December 5, 2023
 Email: ns214@st-andrews.ac.uk
 
 Description: 
-    This file contains my implementation of the Online Sequential Extreme Learning Machine (OS-ELM) algorithm. It monitors the performance of the model through metrics such as training time,
-    peak memory usage and loss. It also generates images of the reconstructions and saves the results of the metrics to a CSV file for further analysis.
+    This file contains my implementation of the Online Sequential Extreme Learning 
+    Machine (OS-ELM) algorithm. It monitors the performance of the model through 
+    metrics such as training time, peak memory usage and loss. It also generates 
+    images of the reconstructions and saves the results of the metrics to a CSV 
+    file for further analysis.
 
 License:
     This code is released under the MIT License
 
 Usage:
-    python train-os-elm.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,cifar10,cifar100,super-tiny-imagenet,tiny-imagenet} [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}] 
-                           [--seq-prop SEQ_PROP] [--generate-imgs] [--save-results] [--phased] [--result-strategy {batch-size,seq-prop,total}] [--num-images NUM_IMAGES]
+    python train-os-elm.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,
+                                        cifar10,cifar100,super-tiny-imagenet,tiny-imagenet} 
+                           [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}] 
+                           [--seq-prop SEQ_PROP] [--generate-imgs] [--save-results] 
+                           [--phased] [--result-strategy {batch-size,seq-prop,total}] 
+                           [--num-images NUM_IMAGES]
 
     options:
       -h, --help            show the help message and exit
+
       --mode {sample,batch}
                             The mode of sequential training (either 'sample' or 'batch')
+
       --dataset {mnist,fashion-mnist,cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
-                            The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')
+                            The dataset to use 
+                            (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100', 
+                             'super-tiny-imagenet' or 'tiny-imagenet')
+
       --batch-size BATCH_SIZE
                             The batch size to use. Defaults to 10 if not provided
+
       --device {cpu,mps,cuda}
-                            The device to use (either 'cpu', 'mps' or 'cuda'). Defaults to 'cuda' if not provided
-      --seq-prop SEQ_PROP   The sequential training data proportion. Must be between 0.01 and 0.99 inclusive. Defaults to 0.99 if not provided
+                            The device to use (either 'cpu', 'mps' or 'cuda'). 
+                            Defaults to 'cuda' if not provided
+
+      --seq-prop SEQ_PROP   The sequential training data proportion. 
+                            Must be between 0.01 and 0.99 inclusive. 
+                            Defaults to 0.99 if not provided
+
       --generate-imgs       Whether to generate images of the reconstructions
+
       --save-results        Whether to save the results to a CSV file
+
       --phased              Whether to monitor and save phased or total performance results
+
       --result-strategy {batch-size,seq-prop,total}
-                            If saving results, the independent variable to vary when saving results
+                            If saving results, the independent variable to vary when 
+                            saving results
+
       --num-images NUM_IMAGES
                             The number of images to generate. Defaults to 5 if not provided
 
@@ -68,15 +91,15 @@ def oselm_init(input_nodes, hidden_nodes):
 
 """
 Load and split the data into training, sequential and test data
-param dataset: The dataset to load
-param mode: The mode to load the data in
-param batch_size: The batch size to use
-param seq_prop: The proportion of the data to use for sequential training
-return train_loader: The training data loader
-return seq_loader: The sequential training data loader
-return test_loader: The test data loader
-return input_nodes: The number of input nodes
-return hidden_nodes: The number of hidden nodes
+:param dataset: The dataset to load
+:param mode: The mode to load the data in
+:param batch_size: The batch size to use
+:param seq_prop: The proportion of the data to use for sequential training
+:return train_loader: The training data loader
+:return seq_loader: The sequential training data loader
+:return test_loader: The test data loader
+:return input_nodes: The number of input nodes
+:return hidden_nodes: The number of hidden nodes
 """
 def load_and_split_data(dataset, mode, batch_size, seq_prop):
     logging.info(f"Loading and preparing data...")
@@ -91,19 +114,49 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
     match dataset:
         case 'mnist':
             transform = transforms.ToTensor()
-            train_data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.MNIST(root = './data', train = False, download = True, transform = transform)
+            train_data = datasets.MNIST(
+                root = './data', 
+                train = True, 
+                download = True, 
+                transform = transform
+            )
+            test_data = datasets.MNIST(
+                root = './data',
+                train = False,
+                download = True,
+                transform = transform
+            )
         case 'fashion-mnist':
             transform = transforms.ToTensor()
-            train_data = datasets.FashionMNIST(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.FashionMNIST(root = './data', train = False, download = True, transform = transform)
+            train_data = datasets.FashionMNIST(
+                root = './data',
+                train = True,
+                download = True,
+                transform = transform
+            )
+            test_data = datasets.FashionMNIST(
+                root = './data',
+                train = False,
+                download = True,
+                transform = transform
+            )
         case 'cifar10':
             transform = transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            train_data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.CIFAR10(root = './data', train = False, download = True, transform = transform)
+            train_data = datasets.CIFAR10(
+                root = './data', 
+                train = True, 
+                download = True, 
+                transform = transform
+            )
+            test_data = datasets.CIFAR10(
+                root = './data', 
+                train = False, 
+                download = True, 
+                transform = transform
+            )
             input_nodes = 3072
             hidden_nodes = 1024
         case 'cifar100':
@@ -111,8 +164,18 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            train_data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.CIFAR100(root = './data', train = False, download = True, transform = transform)
+            train_data = datasets.CIFAR100(
+                root = './data', 
+                train = True, 
+                download = True, 
+                transform = transform
+            )
+            test_data = datasets.CIFAR100(
+                root = './data', 
+                train = False, 
+                download = True, 
+                transform = transform
+            )
             input_nodes = 3072
             hidden_nodes = 1024
         case 'super-tiny-imagenet':
@@ -122,8 +185,14 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
-            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
+            train_data = datasets.ImageFolder(
+                root = './data/tiny-imagenet-200/train', 
+                transform = transform
+            )
+            test_data = datasets.ImageFolder(
+                root = './data/tiny-imagenet-200/test', 
+                transform = transform
+            )
             input_nodes = 3072
             hidden_nodes = 1024
         case 'tiny-imagenet':
@@ -132,8 +201,14 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
-            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
-            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
+            train_data = datasets.ImageFolder(
+                root = './data/tiny-imagenet-200/train', 
+                transform = transform
+            )
+            test_data = datasets.ImageFolder(
+                root = './data/tiny-imagenet-200/test', 
+                transform = transform
+            )
             input_nodes = 12288
             hidden_nodes = 4096
         case _:
@@ -239,7 +314,8 @@ def train_sequential(model, seq_loader, mode, phased):
 
         model.seq_phase(data, mode)
 
-        # Set peak memory to the max of the current memory and the peak memory if using CPU
+        # Set peak memory to the max of the current memory and 
+        # the peak memory if using CPU
         if phased:
             if device == "cpu":
                 current_memory = process.memory_info().rss
@@ -339,8 +415,9 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
         loss, _ = model.evaluate(data, pred)
         losses.append(loss.item())
 
-        # If the batch size is less than the number of images we want to generate, save the outputs
-        # So we can use multiple batches to generate the desired number of images
+        # If the batch size is less than the number of images we want to generate, 
+        # save the outputs so we can use multiple batches to generate the desired 
+        # number of images
         if test_loader.batch_size < num_imgs:
             outputs.append((data, pred))
         if gen_imgs:
