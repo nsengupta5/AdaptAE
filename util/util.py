@@ -9,11 +9,11 @@ Visualize the original and reconstructed images
 :param dataset: The dataset used
 :param n: The number of images to visualize
 """
-def visualize_comparisons(originals, reconstructions, dataset, batch_size, n):
-    logging.info(f"Generating {n} images...")
+def visualize_comparisons(originals, reconstructions, dataset, num_imgs, results_file):
+    logging.info(f"Generating {num_imgs} images...")
     plt.figure(figsize=(20, 4))
-    for i in range(n): # Display original images
-        ax = plt.subplot(2, n, i + 1)
+    for i in range(num_imgs): # Display original images
+        ax = plt.subplot(2, num_imgs, i + 1)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(originals[i].reshape(28, 28))
         elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
@@ -24,7 +24,7 @@ def visualize_comparisons(originals, reconstructions, dataset, batch_size, n):
         ax.get_yaxis().set_visible(False)
 
         # Display reconstructed images
-        ax = plt.subplot(2, n, i + 1 + n)
+        ax = plt.subplot(2, num_imgs, i + 1 + num_imgs)
         if dataset in ["mnist", "fashion-mnist"]:
             plt.imshow(reconstructions[i].reshape(28, 28))
         elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
@@ -35,11 +35,8 @@ def visualize_comparisons(originals, reconstructions, dataset, batch_size, n):
         ax.get_yaxis().set_visible(False)
 
     # Save the images
-    logging.info(f"Saving images to oselm/results/ ...")
-    if batch_size == 1:
-        plt.savefig(f"oselm/results/{dataset}-reconstructions-sample.png")
-    else:
-        plt.savefig(f"oselm/results/{dataset}-reconstructions-batch-{batch_size}.png")
+    logging.info(f"Saving images to output file...")
+    plt.savefig(results_file)
 
 """
 Save the results to a CSV file
@@ -47,9 +44,9 @@ Save the results to a CSV file
 :param phased: Boolean indicating whether the model was monitored in a phased manner
 :param result_strategy: The result strategy used
 """
-def save_result_data(dataset, phased, result_strategy):
+def save_result_data(model, dataset, phased, result_strategy, result_data):
     target_dir = "phased" if phased else "total"
-    with open (f'oselm/data/{target_dir}/{result_strategy}_{dataset}_performance.csv', 'a', newline='') as f:
+    with open (f'{model}/data/{target_dir}/{result_strategy}_{dataset}_performance.csv', 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(result_data)
 

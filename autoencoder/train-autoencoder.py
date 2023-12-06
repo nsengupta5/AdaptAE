@@ -1,89 +1,113 @@
+"""
+File: train-autoencoder.py
+Author: Nikhil Sengupta
+Created on: November 6, 2023
+Last Modified: December 12, 2023
+Email: ns214@st-andrews.ac.uk
+
+Description: 
+    This file contains 
+
+License:
+    This code is released under the MIT License
+
+Usage:
+    python train-autoencoder.py [-h] --dataset {mnist,fashion-mnist,cifar10,
+                                cifar100,super-tiny-imagenet,tiny-imagenet} 
+                                [--device {cpu,mps,cuda}] [--generate-imgs] 
+                                [--save-results] [--num-images NUM_IMAGES] 
+                                [--num-epochs NUM_EPOCHS] [--batch-size BATCH_SIZE]
+
+    Train an autoencoder model
+
+    options:
+      -h, --help            show this help message and exit
+
+      --dataset {mnist,fashion-mnist,cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
+                            The dataset to use 
+                            (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100', 
+                            'super-tiny-imagenet' or 'tiny-imagenet')
+
+      --device {cpu,mps,cuda}
+                            The device to use (either 'cpu', 'mps' or 'cuda'). 
+                            Defaults to 'cuda' if not provided
+
+      --generate-imgs       Whether to generate images of the reconstructions
+
+      --save-results        Whether to save the results to a CSV file
+
+      --num-images NUM_IMAGES
+                            The number of images to generate. 
+                            Defaults to 5 if not provided
+
+      --num-epochs NUM_EPOCHS
+                            The number of epochs to train for. 
+                            Defaults to 30 if not provided
+
+      --batch-size BATCH_SIZE
+                            The batch size to use. 
+                            Defaults to 64 if not provided
+
+Example: python train-autoencoder.py --dataset mnist --num-epochs 50
+"""
+
 from autoencoder import Autoencoder
+from util.util import *
+from util.data import *
 import torch
-from torchvision import datasets, transforms
 import torch.nn as nn
 import logging
-from sys import argv
 import time
-import matplotlib.pyplot as plt
 import psutil
+import argparse
 
-BATCH_SIZE = 64
-NUM_EPOCHS = 30
-NUM_IMAGES = 5
-DEBUG = True
+# Constants
+DEFAULT_BATCH_SIZE = 64
+DEFAULT_NUM_EPOCHS = 30
+DEFAULT_NUM_IMAGES = 5
+result_data = []
 
 """
-Load the data
+Initialize the Autoencoder model
+:param input_nodes: The number of input nodes
+:param hidden_nodes: The number of hidden nodes
+:return: The initialized Autoencoder model
 """
-def load_data(dataset):
+def autoencoder_init(input_nodes, hidden_nodes):
+    logging.info(f"Initializing Autoencoder model...")
+    model = Autoencoder(input_nodes, hidden_nodes).to(device)
+    logging.info("Initializig autoencoder Autoencoder model complete.\n")
+    return model
+
+"""
+Load and split the data
+:param dataset: The dataset to load
+:param batch_size: The batch size
+:return train_loader: The training data loader
+:return test_loader: The test data loader
+:return input_nodes: The number of input nodes
+:return hidden_nodes: The number of hidden nodes
+"""
+def load_and_split_data(dataset, batch_size):
     logging.info(f"Loading and preparing data...")
-    input_nodes = 784
-    hidden_nodes = 128
-    match dataset:
-        case 'mnist':
-            transform = transforms.ToTensor()
-            train_data = datasets.MNIST(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.MNIST(root = './data', train = False, download = True, transform = transform)
-        case 'fashion-mnist':
-            transform = transforms.ToTensor()
-            train_data = datasets.FashionMNIST(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.FashionMNIST(root = './data', train = False, download = True, transform = transform)
-        case 'cifar10':
-            transform = transforms.Compose([
-                transforms.ToTensor(),
-                # Normalize each channel of the input data
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.CIFAR10(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.CIFAR10(root = './data', train = False, download = True, transform = transform)
-            input_nodes = 3072
-            hidden_nodes = 1024
-        case 'cifar100':
-            transform = transforms.Compose([
-                transforms.ToTensor(),
-                # Normalize each channel of the input data
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.CIFAR100(root = './data', train = True, download = True, transform = transform)
-            test_data = datasets.CIFAR100(root = './data', train = False, download = True, transform = transform)
-            input_nodes = 3072
-            hidden_nodes = 1024
-        case 'super-tiny-imagenet':
-            transform = transforms.Compose([
-                transforms.Resize((32,32)),
-                transforms.ToTensor(),
-                # Normalize each channel of the input data
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
-            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
-            input_nodes = 3072
-            hidden_nodes = 1024
-        case 'tiny-imagenet':
-            transform = transforms.Compose([
-                transforms.Resize((64,64)),
-                transforms.ToTensor(),
-                # Normalize each channel of the input data
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/train', transform = transform)
-            test_data = datasets.ImageFolder(root = './data/tiny-imagenet-200/test', transform = transform)
-            input_nodes = 12288
-            hidden_nodes = 4096
-        case _:
-            raise ValueError(f"Invalid dataset: {dataset}")
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = BATCH_SIZE, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = BATCH_SIZE, shuffle = False)
+    # Load the data
+    input_nodes, hidden_nodes, train_data, test_data = load_data(dataset)
+
+    # Create the data loaders
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = batch_size, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = batch_size, shuffle = False)
+    
     logging.info(f"Loading and preparing data complete.")
     return train_loader, test_loader, input_nodes, hidden_nodes
 
 """
 Train the autoencoder model
 :param model: The autoencoder model
+:param data_loader: The training data loader
+:param num_epochs: The number of epochs to train for
 """
-def train_model(dataset, model, data_loader):
+def train_model(model, data_loader, num_epochs):
     logging.info(f"Training the autoencoder model...")
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -99,11 +123,13 @@ def train_model(dataset, model, data_loader):
     logging.info(f"Training on {len(data_loader)} batches...")
     losses = []
     times = []
+
     start_time = time.time()
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(num_epochs):
         loss = 0
         epoch_start_time = time.time()
         for (img, _) in data_loader:
+            # Reshape the image to fit the model
             img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
             train_loss = criterion(recon, img)
@@ -120,9 +146,10 @@ def train_model(dataset, model, data_loader):
             curr_memory = process.memory_info().rss
             peak_memory = max(peak_memory, curr_memory)
 
+        # Save the loss and time for this epoch
         losses.append(loss)
         times.append(epoch_end_time - epoch_start_time)
-        print(f"Epoch: {epoch+1}/{NUM_EPOCHS}, Loss: {loss:.5f}")
+        print(f"Epoch: {epoch+1}/{num_epochs}, Loss: {loss:.5f}")
 
     end_time = time.time()
     training_time = end_time - start_time
@@ -130,21 +157,23 @@ def train_model(dataset, model, data_loader):
     if device == 'cuda':
         peak_memory = torch.cuda.max_memory_allocated()
 
-    title = "Training Benchmarks"
-    print(f"\n{title}")
-    print("=" * len(title))
+    # Print the training benchmarks
+    print_header("Training Benchmarks")
     print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
-    print(f"Training complete. Time taken: {training_time:.2f} seconds.\n")
+    print(f"Time taken: {training_time:.2f} seconds.")
+    print(f"Average loss per epoch: {sum(losses) / len(losses):.5f}\n")
 
-    # Create plots
-    create_plots(dataset, losses, times)
-    logging.info(f"Training complete.")
+    logging.info(f"Training complete.\n")
 
 """
 Test the autoencoder model
 :param model: The autoencoder model
+:param data_loader: The test data loader
+:param dataset: The dataset
+:param gen_imgs: Whether to generate the reconstructed images
+:param num_imgs: The number of images to generate
 """
-def test_model(dataset, model, data_loader):
+def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
     logging.info(f"Testing the autoencoder model...")
     criterion = nn.MSELoss()
     total_loss = 0
@@ -152,127 +181,113 @@ def test_model(dataset, model, data_loader):
     saved_img = False
     with torch.no_grad():
         for (img, _) in data_loader:
+            # Reshape the image to fit the model
             img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
             loss = criterion(recon, img)
             total_loss += loss.item()
-            if not saved_img:
-                visualize_comparisons(dataset, img.cpu().numpy(), recon.cpu().numpy())
-                saved_img = True
+            if gen_imgs:
+                # Only save the first num_imgs images
+                if not saved_img:
+                    results_file = f"autoencoder/results/{dataset}-reconstructions.png"
+                    visualize_comparisons(
+                        img.cpu().numpy(), 
+                        recon.cpu().numpy(), 
+                        dataset,
+                        num_imgs,
+                        results_file
+                    )
+                    saved_img = True
 
-    title = "Total Loss"
-    print(f"\n{title}")
-    print("=" * len(title))
+    # Print results
+    print_header("Total Loss")
     print(f'Loss: {total_loss/len(data_loader):.5f}\n')
+
     logging.info(f"Testing complete.")
 
 """
-Get the dataset to use (either "mnist", "fashion-mnist", "cifar10", "cifar100", "tiny-imagenet")
+Get the arguments from the command line
+:return dataset: The dataset to use
+:return device: The device to use
+:return generate_imgs: Whether to generate the reconstructed images
+:return save_results: Whether to save the results
+:return num_imgs: The number of images to generate
+:return num_epochs: The number of epochs to train for
+:return batch_size: The batch size
 """
-def get_dataset():
-    if len(argv) < 2:
-        # Default to MNIST
-        return 'mnist'
-    elif argv[1] in ['mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'super-tiny-imagenet' ,'tiny-imagenet']:
-        return argv[1]
-    else:
-        exit_with_usage()
+def get_args():
+    parser = argparse.ArgumentParser(description='Train an autoencoder model')
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"],
+        required=True,
+        help=("The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', "
+              "'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')")
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        choices=["cpu", "mps", "cuda"],
+        default="cuda",
+        help=("The device to use (either 'cpu', 'mps' or 'cuda'). "
+              "Defaults to 'cuda' if not provided")
+    )
+    parser.add_argument(
+        "--generate-imgs",
+        action="store_true",
+        help="Whether to generate images of the reconstructions"
+    )
+    parser.add_argument(
+        "--save-results",
+        action="store_true",
+        help="Whether to save the results to a CSV file"
+    )
+    parser.add_argument(
+        "--num-images",
+        type=int,
+        default=DEFAULT_NUM_IMAGES,
+        help="The number of images to generate. Defaults to 5 if not provided"
+    )
+    parser.add_argument(
+        "--num-epochs",
+        type=int,
+        default=DEFAULT_NUM_EPOCHS,
+        help="The number of epochs to train for. Defaults to 30 if not provided"
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=DEFAULT_BATCH_SIZE,
+        help="The batch size to use. Defaults to 64 if not provided"
+    )
 
-"""
-Get the device to use (either "cpu", "mpu" or "cuda")
-"""
-def get_device():
-    if len(argv) < 3:
-        # Default to CPU
-        return "cuda"
-    elif argv[2] not in ["cpu", "mpu", "cuda"]:
-        exit_with_usage()
-    else:
-        return argv[2]
+    # Parse the arguments
+    args = parser.parse_args()
+    dataset = args.dataset
+    device = args.device
+    generate_imgs = args.generate_imgs
+    save_results = args.save_results
+    num_images = args.num_images
+    num_epochs = args.num_epochs
+    batch_size = args.batch_size
 
-"""
-Exit with usage message
-"""
-def exit_with_usage():
-    print(f"Usage: python train-autoencoder.py <dataset>")
-    print("dataset: mnist, fashion-mnist, cifar10, cifar100")
-    exit(1)
-
-"""
-Create plots for the loss vs epoch, time vs epoch and loss vs time
-"""
-def create_plots(dataset, losses, times):
-    # Plot the loss vs epoch
-    plt.plot(losses)
-    plt.title("Loss vs Epoch")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.savefig(f"plots/{dataset}-loss-vs-epoch.png")
-
-    plt.clf()
-
-    # Plot the time vs epoch
-    plt.plot(times)
-    plt.title("Time vs Epoch")
-    plt.xlabel("Epoch")
-    plt.ylabel("Time (s)")
-    plt.savefig(f"plots/{dataset}-time-vs-epoch.png")
-
-    plt.clf()
-
-    # Plot the loss vs time
-    plt.plot(losses, times)
-    plt.title("Loss vs Time")
-    plt.xlabel("Loss")
-    plt.ylabel("Time (s)")
-    plt.savefig(f"plots/{dataset}-loss-vs-time.png")
-
-"""
-Visualize the original and reconstructed images
-:param originals: The original images
-:param reconstructions: The reconstructed images
-:param dataset: The dataset used
-:param n: The number of images to visualize
-"""
-def visualize_comparisons(dataset, originals, reconstructions, n=NUM_IMAGES):
-    plt.figure(figsize=(20, 4))
-    for i in range(n):
-        # Display original images
-        ax = plt.subplot(2, n, i + 1)
-        if dataset in ["mnist", "fashion-mnist"]:
-            plt.imshow(originals[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
-            plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
-        else:
-            plt.imshow(originals[i].reshape(3, 64, 64).transpose(1, 2, 0))
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-
-        # Display reconstructed images
-        ax = plt.subplot(2, n, i + 1 + n)
-        if dataset in ["mnist", "fashion-mnist"]:
-            plt.imshow(reconstructions[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
-            plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
-        else:
-            plt.imshow(reconstructions[i].reshape(3, 64, 64).transpose(1, 2, 0))
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-
-    plt.savefig(f"autoencoder/results/{dataset}-reconstructions.png")
-
+    return dataset, device, generate_imgs, save_results, num_images, num_epochs, batch_size
 
 def main():
     logging.basicConfig(level=logging.INFO)
+
+    # Get the arguments
     global device
-    device = get_device()
-    dataset = get_dataset()
-    train_loader, test_loader, input_nodes, hidden_nodes = load_data(dataset)
-    logging.info("Initializing the autoencoder model...")
-    model = Autoencoder(input_nodes, hidden_nodes).to(device)
-    logging.info("Initializing complete.")
-    train_model(dataset, model, train_loader)
-    test_model(dataset, model, test_loader)
+    dataset, device, gen_imgs, save_results, num_imgs, n_epochs, batch_size = get_args()
+
+    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, batch_size)
+    model = autoencoder_init(input_nodes, hidden_nodes)
+    train_model(model, train_loader, n_epochs)
+    test_model(model, test_loader, dataset, gen_imgs, num_imgs)
+
+    if save_results:
+        save_result_data(model, dataset, n_epochs, batch_size)
 
 if __name__ == "__main__":
     main()

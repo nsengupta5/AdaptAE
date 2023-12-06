@@ -2,15 +2,11 @@
 File: train-os-elm.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
-Last Modified: December 5, 2023
+Last Modified: December 12, 2023
 Email: ns214@st-andrews.ac.uk
 
 Description: 
-    This file contains my implementation of the Online Sequential Extreme Learning 
-    Machine (OS-ELM) algorithm. It monitors the performance of the model through 
-    metrics such as training time, peak memory usage and loss. It also generates 
-    images of the reconstructions and saves the results of the metrics to a CSV 
-    file for further analysis.
+    This file contains 
 
 License:
     This code is released under the MIT License
@@ -62,12 +58,9 @@ Example: python train-os-elm.py --mode sample --dataset mnist
 """
 
 from oselm import OSELM
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from util.util import *
+from util.data import *
 import torch
-from torchvision import datasets, transforms
 from torch.utils.data import random_split
 import logging
 import time
@@ -83,6 +76,9 @@ result_data = []
 
 """
 Initialize the OSELM model
+:param input_nodes: The number of input nodes
+:param hidden_nodes: The number of hidden nodes
+:return: The initialized OSELM model
 """
 def oselm_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing OSELM model...")
@@ -92,11 +88,11 @@ def oselm_init(input_nodes, hidden_nodes):
     return OSELM(activation_func, loss_func, input_nodes, hidden_nodes, device).to(device)
 
 """
-Load and split the data into training, sequential and test data
+Load and split the data
 :param dataset: The dataset to load
-:param mode: The mode to load the data in
+:param mode: The mode of sequential training (either 'sample' or 'batch')
 :param batch_size: The batch size to use
-:param seq_prop: The proportion of the data to use for sequential training
+:param seq_prop: The sequential training data proportion
 :return train_loader: The training data loader
 :return seq_loader: The sequential training data loader
 :return test_loader: The test data loader
@@ -105,118 +101,16 @@ Load and split the data into training, sequential and test data
 """
 def load_and_split_data(dataset, mode, batch_size, seq_prop):
     logging.info(f"Loading and preparing data...")
-    transform = transforms.ToTensor()
-    input_nodes = 784
-    hidden_nodes = 128
 
     # Set the batch size to 1 if in sample mode
     if mode == "sample":
         batch_size = 1
 
-    match dataset:
-        case 'mnist':
-            transform = transforms.ToTensor()
-            train_data = datasets.MNIST(
-                root = './data', 
-                train = True, 
-                download = True, 
-                transform = transform
-            )
-            test_data = datasets.MNIST(
-                root = './data',
-                train = False,
-                download = True,
-                transform = transform
-            )
-        case 'fashion-mnist':
-            transform = transforms.ToTensor()
-            train_data = datasets.FashionMNIST(
-                root = './data',
-                train = True,
-                download = True,
-                transform = transform
-            )
-            test_data = datasets.FashionMNIST(
-                root = './data',
-                train = False,
-                download = True,
-                transform = transform
-            )
-        case 'cifar10':
-            transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.CIFAR10(
-                root = './data', 
-                train = True, 
-                download = True, 
-                transform = transform
-            )
-            test_data = datasets.CIFAR10(
-                root = './data', 
-                train = False, 
-                download = True, 
-                transform = transform
-            )
-            input_nodes = 3072
-            hidden_nodes = 1024
-        case 'cifar100':
-            transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.CIFAR100(
-                root = './data', 
-                train = True, 
-                download = True, 
-                transform = transform
-            )
-            test_data = datasets.CIFAR100(
-                root = './data', 
-                train = False, 
-                download = True, 
-                transform = transform
-            )
-            input_nodes = 3072
-            hidden_nodes = 1024
-        case 'super-tiny-imagenet':
-            transform = transforms.Compose([
-                # Resize the images to 32x32 for smaller network
-                transforms.Resize((32,32)),
-                transforms.ToTensor(),
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.ImageFolder(
-                root = './data/tiny-imagenet-200/train', 
-                transform = transform
-            )
-            test_data = datasets.ImageFolder(
-                root = './data/tiny-imagenet-200/test', 
-                transform = transform
-            )
-            input_nodes = 3072
-            hidden_nodes = 1024
-        case 'tiny-imagenet':
-            transform = transforms.Compose([
-                transforms.Resize((64,64)),
-                transforms.ToTensor(),
-                transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
-            ])
-            train_data = datasets.ImageFolder(
-                root = './data/tiny-imagenet-200/train', 
-                transform = transform
-            )
-            test_data = datasets.ImageFolder(
-                root = './data/tiny-imagenet-200/test', 
-                transform = transform
-            )
-            input_nodes = 12288
-            hidden_nodes = 4096
-        case _:
-            raise ValueError(f"Invalid dataset: {dataset}")
+    # Load the data
+    input_nodes, hidden_nodes, train_data, test_data = load_data(dataset)
 
     # Split the training data into training and sequential data
+    # Based on the sequential training proportion
     seq_size = int(seq_prop * len(train_data))
     train_size = len(train_data) - seq_size
     train_data, seq_data = random_split(train_data, [train_size, seq_size])
@@ -359,7 +253,7 @@ Train the model
 :param device: The device to use
 :param phased: Boolean indicating if we're monitoring phased training
 """
-def train_model(model, train_loader, seq_loader, mode, device, phased):
+def train_model(model, train_loader, seq_loader, mode, phased):
     peak_memory = 0
     process = None
 
@@ -465,6 +359,16 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 
 """ 
 Get the arguments from the command line
+:return mode: The mode of sequential training, either "sample" or "batch"
+:return dataset: The dataset to use
+:return batch_size: The batch size to use
+:return device: The device to use
+:return seq_prop: The proportion of the dataset to use for sequential training
+:return gen_imgs: Boolean indicating if we should generate images
+:return save_results: Boolean indicating if we should save the results
+:return phased: Boolean indicating if we're monitoring phased training
+:return result_strategy: The strategy to use for saving results
+:return num_imgs: The number of images to generate
 """
 def get_args():
     parser = argparse.ArgumentParser(description="Training an OS-ELM model")
@@ -591,7 +495,7 @@ def main():
 
     train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop)
     model = oselm_init(input_nodes, hidden_nodes)
-    train_model(model, train_loader, seq_loader, mode, device, phased)
+    train_model(model, train_loader, seq_loader, mode, phased)
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)
 
     if save_results:
