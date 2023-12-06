@@ -62,15 +62,17 @@ Example: python train-os-elm.py --mode sample --dataset mnist
 """
 
 from oselm import OSELM
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from util.util import *
 import torch
 from torchvision import datasets, transforms
 from torch.utils.data import random_split
 import logging
 import time
 import warnings
-import matplotlib.pyplot as plt
 import psutil
-import csv
 import argparse
 
 # Constants
@@ -405,6 +407,12 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
     losses = []
     outputs = []
     saved_img = False
+    batch_size = test_loader.batch_size
+    results_file = (
+        f"oselm/results/{dataset}-reconstructions-sample.png"
+        if batch_size == 1
+        else f"oselm/results/{dataset}-reconstructions-batch-{batch_size}.png"
+    ) 
 
     for (data, _) in test_loader:
         # Reshape the data to fit the model
@@ -431,8 +439,8 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
                             full_data.cpu().numpy(), 
                             full_pred.cpu().detach().numpy(), 
                             dataset, 
-                            test_loader.batch_size,
-                            num_imgs
+                            num_imgs,
+                            results_file
                         )
                         saved_img = True
                 else:
@@ -440,8 +448,8 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
                         data.cpu().numpy(),
                         pred.cpu().detach().numpy(),
                         dataset,
-                        test_loader.batch_size,
-                        num_imgs
+                        num_imgs,
+                        results_file
                     )
                     saved_img = True
 
@@ -454,57 +462,6 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
     result_data.append(float(str(f"{loss:.5f}")))
 
     logging.info(f"Testing complete.")
-
-"""
-Visualize the original and reconstructed images
-:param originals: The original images
-:param reconstructions: The reconstructed images
-:param dataset: The dataset used
-:param n: The number of images to visualize
-"""
-def visualize_comparisons(originals, reconstructions, dataset, batch_size, n):
-    logging.info(f"Generating {n} images...")
-    plt.figure(figsize=(20, 4))
-    for i in range(n): # Display original images
-        ax = plt.subplot(2, n, i + 1)
-        if dataset in ["mnist", "fashion-mnist"]:
-            plt.imshow(originals[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
-            plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
-        else:
-            plt.imshow(originals[i].reshape(3, 64, 64).transpose(1, 2, 0))
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-
-        # Display reconstructed images
-        ax = plt.subplot(2, n, i + 1 + n)
-        if dataset in ["mnist", "fashion-mnist"]:
-            plt.imshow(reconstructions[i].reshape(28, 28))
-        elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
-            plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))
-        else:
-            plt.imshow(reconstructions[i].reshape(3, 64, 64).transpose(1, 2, 0))
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-
-    # Save the images
-    logging.info(f"Saving images to oselm/results/ ...")
-    if batch_size == 1:
-        plt.savefig(f"oselm/results/{dataset}-reconstructions-sample.png")
-    else:
-        plt.savefig(f"oselm/results/{dataset}-reconstructions-batch-{batch_size}.png")
-
-"""
-Save the results to a CSV file
-:param dataset: The dataset used
-:param phased: Boolean indicating whether the model was monitored in a phased manner
-:param result_strategy: The result strategy used
-"""
-def save_result_data(dataset, phased, result_strategy):
-    target_dir = "phased" if phased else "total"
-    with open (f'oselm/data/{target_dir}/{result_strategy}_{dataset}_performance.csv', 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(result_data)
 
 """ 
 Get the arguments from the command line
@@ -524,7 +481,8 @@ def get_args():
         type=str,
         choices=["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"],
         required=True,
-        help="The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')"
+        help=("The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', "
+              "'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')")
     )
     parser.add_argument(
         "--batch-size",
@@ -536,13 +494,15 @@ def get_args():
         type=str,
         choices=["cpu", "mps", "cuda"],
         default="cuda",
-        help="The device to use (either 'cpu', 'mps' or 'cuda'). Defaults to 'cuda' if not provided"
+        help=("The device to use (either 'cpu', 'mps' or 'cuda'). "
+              "Defaults to 'cuda' if not provided")
     )
     parser.add_argument(
         "--seq-prop",
         type=float,
         default=DEFAULT_SEQ_PROP,
-        help="The sequential training data proportion. Must be between 0.01 and 0.99 inclusive. Defaults to 0.99 if not provided"
+        help=("The sequential training data proportion. Must be between 0.01 and 0.99 inclusive. "
+             "Defaults to 0.99 if not provided")
     )
     parser.add_argument(
         "--generate-imgs",
@@ -610,26 +570,6 @@ def get_args():
 
     return mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy, num_images
 
-"""
-Print the header of a stage
-:param header: The header to print
-"""
-def print_header(header):
-    result_str = "\n" + header + "\n" + "=" * len(header)
-    print(result_str)
-
-
-"""
-Exit the program with an error message of the correct usage
-:param msg: The error message to display
-:param parser: The parser to use to print the correct usage
-"""
-def exit_with_error(msg, parser):
-    logging.error(msg)
-    parser.print_help()
-    exit(1)
-
-
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
     logging.basicConfig(level=logging.INFO)
@@ -655,7 +595,7 @@ def main():
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)
 
     if save_results:
-        save_result_data(dataset, phased, result_strategy)
+        save_result_data("oselm", dataset, phased, result_strategy, result_data)
 
 if __name__ == "__main__":
     main()
