@@ -44,23 +44,23 @@ fi
 if [ "$1" == "seq-prop" ]; then
     # Print floating points from 0.1 to 0.9 with 0.1 increment
     for i in $(seq 0.05 0.05 0.95); do
-        python oselm/train-os-elm.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy seq-prop
+        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy seq-prop
     done
 
     for i in $(seq 0.96 0.01 0.99); do
-        python oselm/train-os-elm.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy seq-prop
+        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy seq-prop
     done
     exit 0
 fi
 
 if [ "$1" == "batch-size" ]; then
-    python oselm/train-os-elm.py --mode sample --dataset "$DATASET" $PHASED_FLAG --save-results --result-strategy batch-size
+    python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" $PHASED_FLAG --save-results --result-strategy batch-size
     for i in $(seq 2 1 4); do
-        python oselm/train-os-elm.py --mode batch --batch-size "$i" --dataset "$DATASET" $PHASED_FLAG --save-results --result-strategy batch-size
+        python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" $PHASED_FLAG --save-results --result-strategy batch-size
     done
 
     for i in $(seq 5 5 100); do
-        python oselm/train-os-elm.py --mode batch --batch-size "$i" --dataset "$DATASET" $PHASED_FLAG --save-results --result-strategy batch-size
+        python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" $PHASED_FLAG --save-results --result-strategy batch-size
     done
     exit 0
 fi
@@ -68,30 +68,30 @@ fi
 if [ "$1" == "all" ]; then
     # Print floating points from 0.1 to 0.9 with 0.1 increment
     for i in $(seq 0.05 0.05 0.95); do
-        python oselm/train-os-elm.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy total
+        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy total
     done
 
     for i in $(seq 0.96 0.01 0.99); do
-        python oselm/train-os-elm.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy total
+        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy total
     done
 
     for i in $(seq 2 1 4); do
         for j in $(seq 0.05 0.05 0.95); do
-            python oselm/train-os-elm.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
         done
 
         for j in $(seq 0.96 0.01 0.99); do
-            python oselm/train-os-elm.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
         done
     done
 
     for i in $(seq 5 5 100); do
         for j in $(seq 0.05 0.05 0.95); do
-            python oselm/train-os-elm.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
         done
 
         for j in $(seq 0.96 0.01 0.99); do
-            python oselm/train-os-elm.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
         done
     done
     exit 0

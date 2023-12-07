@@ -1,5 +1,5 @@
 """
-File: train-os-elm.py
+File: train-ps-elm-ae.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
 Last Modified: December 12, 2023
@@ -12,7 +12,7 @@ License:
     This code is released under the MIT License
 
 Usage:
-    python train-os-elm.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,
+    python train-ps-elm-ae.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,
                                         cifar10,cifar100,super-tiny-imagenet,tiny-imagenet} 
                            [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}] 
                            [--seq-prop SEQ_PROP] [--generate-imgs] [--save-results] 
@@ -54,10 +54,10 @@ Usage:
       --num-images NUM_IMAGES
                             The number of images to generate. Defaults to 5 if not provided
 
-Example: python train-os-elm.py --mode sample --dataset mnist 
+Example: python train-ps-elm-ae.py --mode sample --dataset mnist 
 """
 
-from oselm import OSELM
+from pselmae import PSELMAE
 from util.util import *
 from util.data import *
 import torch
@@ -75,17 +75,17 @@ DEFAULT_NUM_IMAGES = 5
 result_data = []
 
 """
-Initialize the OSELM model
+Initialize the PS-ELM-AE model
 :param input_nodes: The number of input nodes
 :param hidden_nodes: The number of hidden nodes
-:return: The initialized OSELM model
+:return: The initialized PS-ELM-AE model
 """
-def oselm_init(input_nodes, hidden_nodes):
-    logging.info(f"Initializing OSELM model...")
+def pselmae_init(input_nodes, hidden_nodes):
+    logging.info(f"Initializing PS-ELM-AE model...")
     activation_func = 'sigmoid'
     loss_func = 'mse'
-    logging.info(f"Initializing OSELM model complete.\n")
-    return OSELM(activation_func, loss_func, input_nodes, hidden_nodes, device).to(device)
+    logging.info(f"Initializing PS-ELM-AE model complete.\n")
+    return PSELMAE(activation_func, loss_func, input_nodes, hidden_nodes, device).to(device)
 
 """
 Load and split the data
@@ -124,8 +124,8 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
     return train_loader, seq_loader, test_loader, input_nodes, hidden_nodes
 
 """
-Initialize the OSELM model with the initial training data
-:param model: The OSELM model
+Initialize the PS-ELM-AE model with the initial training data
+:param model: The PS-ELM-AE model
 :param train_loader: The initial training loader
 :param phased: Boolean indicating if we're monitoring phased training
 """
@@ -181,8 +181,8 @@ def train_init(model, train_loader, phased):
         logging.info(f"Initial training complete\n")
 
 """
-Train the OSELM model sequentially on the sequential training data
-:param model: The OSELM model
+Train the PS-ELM-AE model sequentially on the sequential training data
+:param model: The PS-ELM-AE model
 :param seq_loader: The sequential training loader
 :param mode: The mode of sequential training, either "sample" or "batch"
 :param phased: Boolean indicating if we're monitoring phased training
@@ -291,8 +291,8 @@ def train_model(model, train_loader, seq_loader, mode, phased):
     logging.info(f"Total training complete\n")
 
 """
-Test the OSELM model on the test data
-:param model: The OSELM model
+Test the PS-ELM-AE model on the test data
+:param model: The PS-ELM-AE model
 :param test_data: The test data
 """
 def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
@@ -303,9 +303,9 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
     saved_img = False
     batch_size = test_loader.batch_size
     results_file = (
-        f"oselm/results/{dataset}-reconstructions-sample.png"
+        f"pselmae/results/{dataset}-reconstructions-sample.png"
         if batch_size == 1
-        else f"oselm/results/{dataset}-reconstructions-batch-{batch_size}.png"
+        else f"pselmae/results/{dataset}-reconstructions-batch-{batch_size}.png"
     ) 
 
     for (data, _) in test_loader:
@@ -371,7 +371,7 @@ Get the arguments from the command line
 :return num_imgs: The number of images to generate
 """
 def get_args():
-    parser = argparse.ArgumentParser(description="Training an OS-ELM model")
+    parser = argparse.ArgumentParser(description="Training a PS-ELM-AE model")
     # Define the arguments
     parser.add_argument(
         "--mode", 
@@ -494,12 +494,12 @@ def main():
                 result_data.append(seq_prop)
 
     train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop)
-    model = oselm_init(input_nodes, hidden_nodes)
+    model = pselmae_init(input_nodes, hidden_nodes)
     train_model(model, train_loader, seq_loader, mode, phased)
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)
 
     if save_results:
-        save_result_data("oselm", dataset, phased, result_strategy, result_data)
+        save_result_data("pselmae", dataset, phased, result_strategy, result_data)
 
 if __name__ == "__main__":
     main()

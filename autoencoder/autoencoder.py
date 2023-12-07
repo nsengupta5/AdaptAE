@@ -1,3 +1,18 @@
+"""
+File: autoencoder.py
+Author: Nikhil Sengupta
+Created on: November 6, 2023
+Last Modified: December 12, 2023
+Email: ns214@st-andrews.ac.uk
+
+Description: 
+    This file contains my implementation of an autoencoder with a single hidden 
+    layer.
+
+License:
+    This code is released under the MIT License
+"""
+
 import torch.nn as nn
 
 class Autoencoder(nn.Module):
@@ -30,6 +45,7 @@ class Autoencoder(nn.Module):
 
     """
     Return the input shape of the autoencoder
+    :return: The input shape of the autoencoder
     """
     @property
     def input_shape(self):
@@ -37,6 +53,7 @@ class Autoencoder(nn.Module):
 
     """
     Return the hidden shape of the autoencoder
+    :return: The hidden shape of the autoencoder
     """
     @property
     def hidden_shape(self):

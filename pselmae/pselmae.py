@@ -1,9 +1,23 @@
+"""
+File: ps-elm-ae.py
+Author: Nikhil Sengupta
+Created on: November 6, 2023
+Last Modified: December 12, 2023
+Email: ns214@st-andrews.ac.uk
+
+Description: 
+    This file contains 
+
+License:
+    This code is released under the MIT License
+"""
+
 import torch
 from torch import nn
 from torch.linalg import pinv
 import logging
 
-class OSELM(nn.Module):
+class PSELMAE(nn.Module):
 
     def __init__(self, activation_func, loss_func, n_input_nodes, n_hidden_nodes, device):
         super().__init__()

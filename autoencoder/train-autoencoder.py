@@ -261,6 +261,12 @@ def get_args():
         default=DEFAULT_BATCH_SIZE,
         help="The batch size to use. Defaults to 64 if not provided"
     )
+    parser.add_argument(
+        "--result-strategy",
+        type=str,
+        choices=["batch-size", "num-epochs", "total"],
+        help="If saving results, the independent variable to vary when saving results"
+    )
 
     # Parse the arguments
     args = parser.parse_args()
@@ -271,15 +277,32 @@ def get_args():
     num_images = args.num_images
     num_epochs = args.num_epochs
     batch_size = args.batch_size
+    result_strategy = args.result_strategy
 
-    return dataset, device, generate_imgs, save_results, num_images, num_epochs, batch_size
+    if args.save_results:
+        if args.result_strategy is None:
+            # Must specify a result strategy if saving result
+            exit_with_error("Must specify a result strategy if saving results", parser)
+
+    return dataset, device, generate_imgs, save_results, num_images, num_epochs, batch_size, result_strategy
 
 def main():
     logging.basicConfig(level=logging.INFO)
 
     # Get the arguments
     global device
-    dataset, device, gen_imgs, save_results, num_imgs, n_epochs, batch_size = get_args()
+    dataset, device, gen_imgs, save_results, num_imgs, n_epochs, batch_size, result_strategy = get_args()
+
+    # Append independent variable to result data
+    if save_results:
+        match result_strategy:
+            case "batch-size":
+                result_data.append(batch_size)
+            case "num-epochs":
+                result_data.append(n_epochs)
+            case "total":
+                result_data.append(batch_size)
+                result_data.append(n_epochs)
 
     train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, batch_size)
     model = autoencoder_init(input_nodes, hidden_nodes)
@@ -287,7 +310,7 @@ def main():
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)
 
     if save_results:
-        save_result_data(model, dataset, n_epochs, batch_size)
+        save_result_data("autoencoder", dataset, None, result_strategy, result_data)
 
 if __name__ == "__main__":
     main()

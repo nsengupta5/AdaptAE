@@ -1,4 +1,3 @@
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -21,7 +20,7 @@ def plot_time_vs_prop(data):
     ax[1].grid(True)
 
     plt.tight_layout()
-    plt.savefig('plots/oselm/sequential_prop_vs_time.png')
+    plt.savefig('plots/pselmae/sequential_prop_vs_time.png')
 
 def plot_peak_memory_vs_prop(data):
     _, ax = plt.subplots(2, 1, figsize=(10, 12))
@@ -41,7 +40,7 @@ def plot_peak_memory_vs_prop(data):
     ax[1].grid(True)
 
     plt.tight_layout()
-    plt.savefig('plots/oselm/sequential_prop_vs_peak_memory.png')
+    plt.savefig('plots/pselmae/sequential_prop_vs_peak_memory.png')
 
 def plot_loss_vs_prop(data):
     # Creating two separate plots for Initial Loss and Sequential Loss
@@ -62,7 +61,7 @@ def plot_loss_vs_prop(data):
     ax[1].grid(True)
 
     plt.tight_layout()
-    plt.savefig('plots/oselm/sequential_prop_vs_loss.png')
+    plt.savefig('plots/pselmae/sequential_prop_vs_loss.png')
 
 def plot_time_vs_batch(data):
     # Creating two separate plots for Initial Time and Sequential Time
@@ -83,7 +82,7 @@ def plot_time_vs_batch(data):
     ax[1].grid(True)
 
     plt.tight_layout()
-    plt.savefig('plots/oselm/batch_size_vs_time.png')
+    plt.savefig('plots/pselmae/batch_size_vs_time.png')
 
 def plot_peak_memory_vs_batch(data):
     _, ax = plt.subplots(2, 1, figsize=(10, 12))
@@ -103,7 +102,7 @@ def plot_peak_memory_vs_batch(data):
     ax[1].grid(True)
 
     plt.tight_layout()
-    plt.savefig('plots/oselm/batch_size_vs_peak_memory.png')
+    plt.savefig('plots/pselmae/batch_size_vs_peak_memory.png')
 
 def plot_loss_vs_batch(data):
     _, ax = plt.subplots(2, 1, figsize=(10, 12))
@@ -123,7 +122,7 @@ def plot_loss_vs_batch(data):
     ax[1].grid(True)
 
     plt.tight_layout()
-    plt.savefig('plots/oselm/batch_size_vs_loss.png')
+    plt.savefig('plots/pselmae/batch_size_vs_loss.png')
     pass
 
 
@@ -183,20 +182,20 @@ def plot_total_all_vs_loss(data):
 
 def main():
     # # Reading data from csv file
-    # data = pd.read_csv('oselm/data/seq_prop_fashion-mnist_performance.csv')
+    # data = pd.read_csv('pselmae/data/seq_prop_fashion-mnist_performance.csv')
 
     # # Plotting the data
     # plot_time_vs_prop(data)
     # plot_peak_memory_vs_prop(data)
     # plot_loss_vs_prop(data)
 
-    # data = pd.read_csv('oselm/data/batch_size_fashion-mnist_performance.csv')
+    # data = pd.read_csv('pselmae/data/batch_size_fashion-mnist_performance.csv')
 
     # plot_time_vs_batch(data)
     # plot_peak_memory_vs_batch(data)
     # plot_loss_vs_batch(data)
 
-    data = pd.read_csv('oselm/data/total/total_cifar100_performance.csv')
+    data = pd.read_csv('pselmae/data/total/total_cifar100_performance.csv')
 
     plot_total_all_vs_peak_mem(data)
     plot_total_all_vs_time(data)
