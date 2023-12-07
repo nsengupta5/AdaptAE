@@ -1,5 +1,5 @@
 """
-File: ps-elm-ae.py
+File: pselmae.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
 Last Modified: December 12, 2023
@@ -13,9 +13,9 @@ License:
 """
 
 import torch
+from util.util import assert_cond
 from torch import nn
 from torch.linalg import pinv
-import logging
 
 class PSELMAE(nn.Module):
 
@@ -58,10 +58,6 @@ class PSELMAE(nn.Module):
     :param pred_data: The predicted data
     """
     def evaluate(self, test_data, pred_data):
-        # Assert that:
-        # 1. The test data and predicted data have the same shape
-        # 2. The test data shape matches the input nodes
-        # 3. The predicted data shape matches the input nodes
         assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
         assert_cond(test_data.shape[1] == self.__n_input_nodes, "Test data shape does not match the input nodes")
         assert_cond(pred_data.shape[1] == self.__n_input_nodes, "Predicted data shape does not match the input nodes")
@@ -74,9 +70,7 @@ class PSELMAE(nn.Module):
     :param data: The input data for initialization phase
     """
     def init_phase(self, data):
-        # Assert that the input data shape matches the input nodes
         assert_cond(data.shape[1] == self.__n_input_nodes, "Input data shape does not match the input nodes")
-        # Assert that the hidden layer shape matches the hidden nodes
         H = self.__activation_func(torch.matmul(data, self.__alpha) + self.__bias)
         assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
         assert_cond(H.shape[0] == data.shape[0], "Hidden layer shape does not match number of samples")
@@ -175,13 +169,3 @@ class PSELMAE(nn.Module):
     @property
     def hidden_shape(self):
         return (self.__n_hidden_nodes,)
-
-"""
-Assert a condition and log the error if the condition is not met
-"""
-def assert_cond(condition, msg):
-    try:
-        assert condition, msg
-    except AssertionError as e:
-        logging.error(e)
-        raise e

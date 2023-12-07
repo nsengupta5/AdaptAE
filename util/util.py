@@ -67,3 +67,15 @@ def exit_with_error(msg, parser):
     logging.error(msg)
     parser.print_help()
     exit(1)
+
+"""
+Assert a condition and log the error if the condition is not met
+:param condition: The condition to assert
+:param msg: The error message to display
+"""
+def assert_cond(condition, msg):
+    try:
+        assert condition, msg
+    except AssertionError as e:
+        logging.error(e)
+        raise e

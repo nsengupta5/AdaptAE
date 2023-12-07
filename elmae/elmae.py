@@ -1,8 +1,21 @@
+"""
+File: elmae.py
+Author: Nikhil Sengupta
+Created on: November 6, 2023
+Last Modified: December 12, 2023
+Email: ns214@st-andrews.ac.uk
+
+Description: 
+    This file contains 
+
+License:
+    This code is released under the MIT License
+"""
+
 import torch
 import torch.nn as nn
 from torch.linalg import lstsq
-from torch.nn.functional import normalize
-import logging
+from util.util import assert_cond
 
 class ELMAE(nn.Module):
 
@@ -44,13 +57,10 @@ class ELMAE(nn.Module):
     :param pred_data: The predicted data
     """
     def evaluate(self, test_data, pred_data):
-        # Assert that:
-        # 1. The test data and predicted data have the same shape
-        # 2. The test data shape matches the input nodes
-        # 3. The predicted data shape matches the input nodes
         assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
         assert_cond(test_data.shape[1] == self.__n_input_nodes, "Test data shape does not match the input nodes")
         assert_cond(pred_data.shape[1] == self.__n_input_nodes, "Predicted data shape does not match the input nodes")
+
         loss = self.__loss_func(test_data, pred_data)
         accuracy = torch.sum(torch.argmax(self.predict(test_data), dim=1) == torch.argmax(pred_data, dim=1)) / len(pred_data) * 100
         return loss, accuracy
@@ -60,10 +70,10 @@ class ELMAE(nn.Module):
     :param train_data: The train data
     """
     def calc_beta_sparse(self, train_data):
-        # Assert that the input data shape matches the input nodes
         assert_cond(train_data.shape[1] == self.__n_input_nodes, "Train data shape does not match the input nodes")
 
         H = self.__activation_func(torch.matmul(train_data, self.__alpha) + self.__bias)
+
         assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
         assert_cond(H.shape[0] == train_data.shape[0], "Hidden layer shape does not match the train data")
 
@@ -79,29 +89,16 @@ class ELMAE(nn.Module):
     :param train_data: The train data
     """
     def calc_beta_equal(self, train_data):
-        # Assert that the input data shape matches the input nodes
         assert_cond(train_data.shape[1] == self.__n_input_nodes, "Train data shape does not match the input nodes")
+
         H = self.__activation_func(torch.matmul(train_data, self.__alpha) + self.__bias)
+
         assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
         assert_cond(H.shape[0] == train_data.shape[0], "Hidden layer shape does not match the train data")
 
         self.__beta = lstsq(H, train_data).solution
         b_Tb = torch.round(torch.round(torch.matmul(self.__beta, self.__beta)))
         assert_cond(torch.allclose(b_Tb, torch.eye(self.__n_input_nodes).to(self.__device)), "Output layer parameters are not orthogonal")
-
-    """
-    Orthogonalize the hidden layer parameters
-    """
-    def orthogonalize_hidden_params(self):
-        q, _ = torch.linalg.qr(self.__alpha)
-        self.__alpha.data = q
-        alpha_T = torch.transpose(self.__alpha, 0, 1)
-        ident = torch.eye(self.__n_hidden_nodes).to(self.__device)
-        a_Ta = torch.round(torch.matmul(alpha_T, self.__alpha))
-        assert_cond(torch.allclose(a_Ta, ident), "Hidden layer parameters are not orthogonal")
-        self.__bias.data = normalize(self.__bias, dim=0)
-        b_Tb = torch.round(torch.matmul(self.__bias, self.__bias))
-        assert_cond(b_Tb == 1, "Hidden layer bias is not normalized")
 
     """
     Return the input shape of the network
@@ -116,13 +113,3 @@ class ELMAE(nn.Module):
     @property
     def hidden_shape(self):
         return (self.__n_hidden_nodes,)
-
-"""
-Assert a condition and log the error if the condition is not met
-"""
-def assert_cond(condition, msg):
-    try:
-        assert condition, msg
-    except AssertionError as e:
-        logging.error(e)
-        raise e
