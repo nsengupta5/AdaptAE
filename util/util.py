@@ -1,3 +1,18 @@
+"""
+File: util.py
+Author: Nikhil Sengupta
+Created on: November 6, 2023
+Last Modified: December 12, 2023
+Email: ns214@st-andrews.ac.uk
+
+Description: 
+    This file contains utility functions common to all models,
+    such as assertions, visualizations of data, etc.
+
+License:
+    This code is released under the MIT License
+"""
+
 import logging
 import matplotlib.pyplot as plt
 import csv

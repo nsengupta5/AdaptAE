@@ -1,3 +1,19 @@
+"""
+File: data.py
+Author: Nikhil Sengupta
+Created on: November 6, 2023
+Last Modified: December 12, 2023
+Email: ns214@st-andrews.ac.uk
+
+Description: 
+    This file contains a function that loads the data for a model
+    and returns the input and hidden nodes as well as the training
+    and test data
+
+License:
+    This code is released under the MIT License
+"""
+
 from torchvision import datasets, transforms
 
 """
