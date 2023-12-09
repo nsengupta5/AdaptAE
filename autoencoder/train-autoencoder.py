@@ -70,8 +70,11 @@ result_data = []
 """
 Initialize the Autoencoder model
 :param input_nodes: The number of input nodes
+:type input_nodes: int
 :param hidden_nodes: The number of hidden nodes
+:type hidden_nodes: int
 :return: The initialized Autoencoder model
+:rtype: Autoencoder
 """
 def autoencoder_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing Autoencoder model...")
@@ -82,11 +85,17 @@ def autoencoder_init(input_nodes, hidden_nodes):
 """
 Load and split the data
 :param dataset: The dataset to load
+:type dataset: str
 :param batch_size: The batch size
+:type batch_size: int
 :return train_loader: The training data loader
+:rtype train_loader: torch.utils.data.DataLoader
 :return test_loader: The test data loader
+:rtype test_loader: torch.utils.data.DataLoader
 :return input_nodes: The number of input nodes
+:rtype input_nodes: int
 :return hidden_nodes: The number of hidden nodes
+:rtype hidden_nodes: int
 """
 def load_and_split_data(dataset, batch_size):
     logging.info(f"Loading and preparing data...")
@@ -104,8 +113,11 @@ def load_and_split_data(dataset, batch_size):
 """
 Train the autoencoder model
 :param model: The autoencoder model
+:type model: Autoencoder
 :param data_loader: The training data loader
+:type data_loader: torch.utils.data.DataLoader
 :param num_epochs: The number of epochs to train for
+:type num_epochs: int
 """
 def train_model(model, data_loader, num_epochs):
     logging.info(f"Training the autoencoder model...")
@@ -168,10 +180,15 @@ def train_model(model, data_loader, num_epochs):
 """
 Test the autoencoder model
 :param model: The autoencoder model
+:type model: Autoencoder
 :param data_loader: The test data loader
+:type data_loader: torch.utils.data.DataLoader
 :param dataset: The dataset
+:type dataset: str
 :param gen_imgs: Whether to generate the reconstructed images
+:type gen_imgs: bool
 :param num_imgs: The number of images to generate
+:type num_imgs: int
 """
 def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
     logging.info(f"Testing the autoencoder model...")
@@ -208,12 +225,19 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
 """
 Get the arguments from the command line
 :return dataset: The dataset to use
+:rtype dataset: str
 :return device: The device to use
+:rtype device: str
 :return generate_imgs: Whether to generate the reconstructed images
+:rtype generate_imgs: bool
 :return save_results: Whether to save the results
+:rtype save_results: bool
 :return num_imgs: The number of images to generate
+:rtype num_imgs: int
 :return num_epochs: The number of epochs to train for
+:rtype num_epochs: int
 :return batch_size: The batch size
+:rtype batch_size: int
 """
 def get_args():
     parser = argparse.ArgumentParser(description='Train an autoencoder model')

@@ -47,6 +47,9 @@ class PSELMAE(nn.Module):
     """
     Predict the output of the network based on the input data
     :param test_data: The test data
+    :type test_data: torch.Tensor
+    :return: The predicted output
+    :rtype: torch.Tensor
     """
     def predict(self, test_data):
         H = self.__activation_func(torch.matmul(test_data, self.__alpha) + self.__bias)
@@ -55,7 +58,12 @@ class PSELMAE(nn.Module):
     """
     Evaluate the network based on the test data and the predicted data
     :param test_data: The test data
+    :type test_data: torch.Tensor
     :param pred_data: The predicted data
+    :type pred_data: torch.Tensor
+    :return: The loss and accuracy
+    :rtype loss: torch.Tensor
+    :rtype accuracy: torch.Tensor
     """
     def evaluate(self, test_data, pred_data):
         assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
@@ -68,6 +76,9 @@ class PSELMAE(nn.Module):
     """
     Initialize the network based on the input data
     :param data: The input data for initialization phase
+    :type data: torch.Tensor
+    :return: The network after initialization phase
+    :rtype: torch.Tensor
     """
     def init_phase(self, data):
         assert_cond(data.shape[1] == self.__n_input_nodes, "Input data shape does not match the input nodes")
@@ -85,7 +96,11 @@ class PSELMAE(nn.Module):
     """
     Sequentially train the network based on the input data
     :param data: The input data for sequential training
+    :type data: torch.Tensor
     :param mode: The mode of training, either "batch" or "sample"
+    :type mode: str
+    :return: The network after sequential training
+    :rtype: torch.Tensor
     """
     def seq_phase(self, data, mode):
         # Assert that the hidden layer shape matches the hidden nodes
@@ -95,12 +110,12 @@ class PSELMAE(nn.Module):
             assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
             assert_cond(data.shape[1] == self.__n_input_nodes, "Input data shape does not match the input nodes")
             batch_size = data.shape[0]
-            self.calc_p_batch(batch_size, H, H.T)
-            self.calc_beta_batch(data, H, H.T)
+            self.calc_p_batch(batch_size, H)
+            self.calc_beta_batch(data, H)
         elif mode == "sample":
             assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
-            self.calc_p_sample(H.T, H)
-            self.calc_beta_sample(data, H.T, H)
+            self.calc_p_sample(H.T)
+            self.calc_beta_sample(data, H.T)
         else:
             raise ValueError("Mode not supported")
 
@@ -109,13 +124,14 @@ class PSELMAE(nn.Module):
     """
     Calculate the p of the network based on batch of input data
     :param batch_size: The size of the batch
+    :type batch_size: int
     :param H: The hidden layer output matrix
-    :param H_T: The transpose of the hidden layer output matrix
+    :type H: torch.Tensor
     """
-    def calc_p_batch(self, batch_size, H, H_T):
-        PH_T = torch.matmul(self.__p, H_T)
+    def calc_p_batch(self, batch_size, H):
+        PH_T = torch.matmul(self.__p, H.T)
         I = torch.eye(batch_size).to(self.__device)
-        HPH_T_Inv = pinv(torch.matmul(H, torch.matmul(self.__p, H_T)) + I)
+        HPH_T_Inv = pinv(torch.matmul(H, torch.matmul(self.__p, H.T)) + I)
         del I
         HP = torch.matmul(H, self.__p)
         self.__p -= torch.matmul(torch.matmul(PH_T, HPH_T_Inv), HP)
@@ -123,41 +139,46 @@ class PSELMAE(nn.Module):
     """
     Calculate the beta of the network based on batch of input data
     :param batch: The batch of input data
+    :type batch: torch.Tensor
     :param H: The hidden layer output matrix
-    :param H_T: The transpose of the hidden layer output matrix
+    :type H: torch.Tensor
     """
-    def calc_beta_batch(self, batch, H, H_T):
+    def calc_beta_batch(self, batch, H):
         THB = batch - torch.matmul(H, self.__beta)
-        self.__beta += torch.matmul(torch.matmul(self.__p, H_T), THB)
+        self.__beta += torch.matmul(torch.matmul(self.__p, H.T), THB)
 
     """
     Calculate the p of the network based on sample of input data
     :param H: The hidden layer output matrix
-    :param H_T: The transpose of the hidden layer output matrix
+    :type H: torch.Tensor
     """
-    def calc_p_sample(self, H, H_T):
+    def calc_p_sample(self, H):
         with torch.no_grad():
             PH = torch.matmul(self.__p, H)
-            PHH_T = torch.matmul(PH, H_T)
+            PHH_T = torch.matmul(PH, H.T)
             del PH
             PHH_TP = torch.matmul(PHH_T, self.__p)
             del PHH_T
-            H_TPH = torch.matmul(H_T, torch.matmul(self.__p, H))
+            H_TPH = torch.matmul(H.T, torch.matmul(self.__p, H))
             self.__p -= torch.div(PHH_TP, 1 + H_TPH)
 
     """
     Calculate the beta of the network based on sample of input data
     :param sample: The sample of input data
+    :type sample: torch.Tensor
     :param H: The hidden layer output matrix
+    :type H: torch.Tensor
     """
-    def calc_beta_sample(self, sample, H, H_T):
+    def calc_beta_sample(self, sample, H):
         with torch.no_grad():
-            THB = sample - torch.matmul(H_T, self.__beta)
+            THB = sample - torch.matmul(H.T, self.__beta)
             PH_T = torch.matmul(self.__p, H)
             self.__beta += torch.matmul(PH_T, THB)
 
     """
     Return the input shape of the network
+    :return: The input shape of the network
+    :rtype: tuple
     """
     @property
     def input_shape(self):
@@ -165,6 +186,8 @@ class PSELMAE(nn.Module):
 
     """
     Return the hidden shape of the network
+    :return: The hidden shape of the network
+    :rtype: tuple
     """
     @property
     def hidden_shape(self):

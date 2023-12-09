@@ -77,8 +77,11 @@ result_data = []
 """
 Initialize the PS-ELM-AE model
 :param input_nodes: The number of input nodes
+:type input_nodes: int
 :param hidden_nodes: The number of hidden nodes
+:type hidden_nodes: int
 :return: The initialized PS-ELM-AE model
+:rtype: PSELMAE
 """
 def pselmae_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing PS-ELM-AE model...")
@@ -90,14 +93,23 @@ def pselmae_init(input_nodes, hidden_nodes):
 """
 Load and split the data
 :param dataset: The dataset to load
+:type dataset: str
 :param mode: The mode of sequential training (either 'sample' or 'batch')
+:type mode: str
 :param batch_size: The batch size to use
+:type batch_size: int
 :param seq_prop: The sequential training data proportion
+:type seq_prop: float
 :return train_loader: The training data loader
+:rtype train_loader: torch.utils.data.DataLoader
 :return seq_loader: The sequential training data loader
+:rtype seq_loader: torch.utils.data.DataLoader
 :return test_loader: The test data loader
+:rtype test_loader: torch.utils.data.DataLoader
 :return input_nodes: The number of input nodes
+:rtype input_nodes: int
 :return hidden_nodes: The number of hidden nodes
+:rtype hidden_nodes: int
 """
 def load_and_split_data(dataset, mode, batch_size, seq_prop):
     logging.info(f"Loading and preparing data...")
@@ -126,8 +138,11 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
 """
 Initialize the PS-ELM-AE model with the initial training data
 :param model: The PS-ELM-AE model
+:type model: PSELMAE
 :param train_loader: The initial training loader
+:type train_loader: torch.utils.data.DataLoader
 :param phased: Boolean indicating if we're monitoring phased training
+:type phased: bool
 """
 def train_init(model, train_loader, phased):
     peak_memory = 0
@@ -183,9 +198,13 @@ def train_init(model, train_loader, phased):
 """
 Train the PS-ELM-AE model sequentially on the sequential training data
 :param model: The PS-ELM-AE model
+:type model: PSELMAE
 :param seq_loader: The sequential training loader
+:type seq_loader: torch.utils.data.DataLoader
 :param mode: The mode of sequential training, either "sample" or "batch"
+:type mode: str
 :param phased: Boolean indicating if we're monitoring phased training
+:type phased: bool
 """
 def train_sequential(model, seq_loader, mode, phased):
     logging.info(f"Sequential training on {len(seq_loader)} batches in {mode} mode...")
@@ -247,11 +266,17 @@ def train_sequential(model, seq_loader, mode, phased):
 """
 Train the model
 :param model: The model to train
+:type model: PSELMAE
 :param train_loader: The training data loader
+:type train_loader: torch.utils.data.DataLoader
 :param seq_loader: The sequential training data loader
+:type seq_loader: torch.utils.data.DataLoader
 :param mode: The mode of sequential training, either "sample" or "batch"
+:type mode: str
 :param device: The device to use
+:type device: str
 :param phased: Boolean indicating if we're monitoring phased training
+:type phased: bool
 """
 def train_model(model, train_loader, seq_loader, mode, phased):
     peak_memory = 0
@@ -293,7 +318,9 @@ def train_model(model, train_loader, seq_loader, mode, phased):
 """
 Test the PS-ELM-AE model on the test data
 :param model: The PS-ELM-AE model
+:type model: PSELMAE
 :param test_data: The test data
+:type test_data: torch.utils.data.DataLoader
 """
 def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
@@ -360,15 +387,25 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 """ 
 Get the arguments from the command line
 :return mode: The mode of sequential training, either "sample" or "batch"
+:rtype mode: str
 :return dataset: The dataset to use
+:rtype dataset: str
 :return batch_size: The batch size to use
+:rtype batch_size: int
 :return device: The device to use
+:rtype device: str
 :return seq_prop: The proportion of the dataset to use for sequential training
+:rtype seq_prop: float
 :return gen_imgs: Boolean indicating if we should generate images
+:rtype gen_imgs: bool
 :return save_results: Boolean indicating if we should save the results
+:rtype save_results: bool
 :return phased: Boolean indicating if we're monitoring phased training
+:rtype phased: bool
 :return result_strategy: The strategy to use for saving results
+:rtype result_strategy: str
 :return num_imgs: The number of images to generate
+:rtype num_imgs: int
 """
 def get_args():
     parser = argparse.ArgumentParser(description="Training a PS-ELM-AE model")
