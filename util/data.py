@@ -19,10 +19,15 @@ from torchvision import datasets, transforms
 """
 Load the data and return the input and hidden nodes
 :param dataset: The dataset to load
+:type dataset: str
 :return input_nodes: The number of input nodes
+:rtype input_nodes: int
 :return hidden_nodes: The number of hidden nodes
+:rtype hidden_nodes: int
 :return train_data: The training data
+:rtype train_data: torch.utils.data.Dataset
 :return test_data: The test data
+:rtype test_data: torch.utils.data.Dataset
 """
 def load_data(dataset):
     transform = transforms.ToTensor()

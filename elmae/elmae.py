@@ -46,6 +46,9 @@ class ELMAE(nn.Module):
     """
     Predict the output of the network based on the input data
     :param test_data: The test data
+    :type test_data: torch.Tensor
+    :return: The predicted output
+    :rtype: torch.Tensor
     """
     def predict(self, test_data):
         H = self.__activation_func(torch.matmul(test_data, self.__alpha) + self.__bias)
@@ -54,7 +57,12 @@ class ELMAE(nn.Module):
     """
     Evaluate the network based on the test data and the predicted data
     :param test_data: The test data
+    :type test_data: torch.Tensor
     :param pred_data: The predicted data
+    :type pred_data: torch.Tensor
+    :return: The loss and accuracy
+    :rtype loss: torch.Tensor
+    :rtype accuracy: torch.Tensor
     """
     def evaluate(self, test_data, pred_data):
         assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
@@ -68,6 +76,7 @@ class ELMAE(nn.Module):
     """
     Predict the output of ELM-AE for sparse and compressed representations based on the input data
     :param train_data: The train data
+    :type train_data: torch.Tensor
     """
     def calc_beta_sparse(self, train_data):
         assert_cond(train_data.shape[1] == self.__n_input_nodes, "Train data shape does not match the input nodes")
@@ -87,6 +96,7 @@ class ELMAE(nn.Module):
     """
     Predict the output of ELM-AE for equal representations based on the input data
     :param train_data: The train data
+    :type train_data: torch.Tensor
     """
     def calc_beta_equal(self, train_data):
         assert_cond(train_data.shape[1] == self.__n_input_nodes, "Train data shape does not match the input nodes")
@@ -102,6 +112,8 @@ class ELMAE(nn.Module):
 
     """
     Return the input shape of the network
+    :return: The input shape
+    :rtype: tuple
     """
     @property
     def input_shape(self):
@@ -109,6 +121,8 @@ class ELMAE(nn.Module):
 
     """
     Return the hidden shape of the network
+    :return: The hidden shape
+    :rtype: tuple
     """
     @property
     def hidden_shape(self):

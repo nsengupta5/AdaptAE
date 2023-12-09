@@ -1,5 +1,5 @@
 .. PS-ELM-AE documentation master file, created by
-   sphinx-quickstart on Tue Dec  5 16:13:38 2023.
+   sphinx-quickstart on Sat Dec  9 14:16:43 2023.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -11,7 +11,6 @@ Welcome to PS-ELM-AE's documentation!
    :caption: Contents:
 
 
-   oselm
 
 Indices and tables
 ==================

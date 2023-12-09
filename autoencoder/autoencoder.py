@@ -37,6 +37,9 @@ class Autoencoder(nn.Module):
     """
     Forward pass of the autoencoder
     :param x: The input data
+    :type x: torch.Tensor
+    :return: The output of the autoencoder
+    :rtype: torch.Tensor
     """
     def forward(self, x):
         encoded = self.encoder(x)
@@ -46,6 +49,7 @@ class Autoencoder(nn.Module):
     """
     Return the input shape of the autoencoder
     :return: The input shape of the autoencoder
+    :rtype: tuple
     """
     @property
     def input_shape(self):
@@ -54,6 +58,7 @@ class Autoencoder(nn.Module):
     """
     Return the hidden shape of the autoencoder
     :return: The hidden shape of the autoencoder
+    :rtype: tuple
     """
     @property
     def hidden_shape(self):

@@ -58,8 +58,11 @@ result_data = []
 """
 Initialize the ELMAE model
 :param input_nodes: The number of input nodes
+:type input_nodes: int
 :param hidden_nodes: The number of hidden nodes
+:type hidden_nodes: int
 :return model: The initialized ELMAE model
+:rtype model: ELMAE
 """
 def elmae_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing ELMAE model...")
@@ -72,10 +75,15 @@ def elmae_init(input_nodes, hidden_nodes):
 """
 Load and split the data
 :param dataset: The dataset to load
+:type dataset: str
 :return train_loader: The training data
+:rtype train_loader: torch.utils.data.DataLoader
 :return test_loader: The test data
+:rtype test_loader: torch.utils.data.DataLoader
 :return input_nodes: The number of input nodes
+:rtype input_nodes: int
 :return hidden_nodes: The number of hidden nodes
+:rtype hidden_nodes: int
 """
 def load_and_split_data(dataset):
     logging.info(f"Loading and preparing data...")
@@ -93,7 +101,9 @@ def load_and_split_data(dataset):
 """
 Train the model
 :param model: The ELMAE model to train
+:type model: ELMAE
 :param train_loader: The training data
+:type train_loader: torch.utils.data.DataLoader
 """
 def train_model(model, train_loader):
     peak_memory = 0
@@ -151,9 +161,13 @@ def train_model(model, train_loader):
 """
 Test the model
 :param model: The ELMAE model to test
+:type model: ELMAE
 :param test_data: The test data
+:type test_data: torch.utils.data.DataLoader
 :param generate_imgs: Whether to generate images of the reconstructions
+:type generate_imgs: bool
 :param num_imgs: The number of images to generate
+:type num_imgs: int
 """
 def test_model(model, test_loader, dataset, generate_imgs, num_imgs):
     for (data, _) in test_loader:

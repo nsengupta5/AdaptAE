@@ -20,9 +20,13 @@ import csv
 """
 Visualize the original and reconstructed images
 :param originals: The original images
+:type originals: torch.Tensor
 :param reconstructions: The reconstructed images
+:type reconstructions: torch.Tensor
 :param dataset: The dataset used
+:type dataset: str
 :param n: The number of images to visualize
+:type n: int
 """
 def visualize_comparisons(originals, reconstructions, dataset, num_imgs, results_file):
     logging.info(f"Generating {num_imgs} images...")
@@ -56,8 +60,11 @@ def visualize_comparisons(originals, reconstructions, dataset, num_imgs, results
 """
 Save the results to a CSV file
 :param dataset: The dataset used
+:type dataset: str
 :param phased: Boolean indicating whether the model was monitored in a phased manner
+:type phased: bool
 :param result_strategy: The result strategy used
+:type result_strategy: str
 """
 def save_result_data(model, dataset, phased, result_strategy, result_data):
     target_dir = "phased" if phased else "total"
@@ -68,6 +75,7 @@ def save_result_data(model, dataset, phased, result_strategy, result_data):
 """
 Print the header of a stage
 :param header: The header to print
+:type header: str
 """
 def print_header(header):
     result_str = "\n" + header + "\n" + "=" * len(header)
@@ -76,7 +84,9 @@ def print_header(header):
 """
 Exit the program with an error message of the correct usage
 :param msg: The error message to display
+:type msg: str
 :param parser: The parser to use to print the correct usage
+:type parser: argparse.ArgumentParser
 """
 def exit_with_error(msg, parser):
     logging.error(msg)
@@ -86,7 +96,9 @@ def exit_with_error(msg, parser):
 """
 Assert a condition and log the error if the condition is not met
 :param condition: The condition to assert
+:type condition: bool
 :param msg: The error message to display
+:type msg: str
 """
 def assert_cond(condition, msg):
     try:

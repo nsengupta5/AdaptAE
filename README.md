@@ -1,4 +1,6 @@
-## CS5199 Experiments
+## PS-ELM-AE
+
+### Introduction
 
 ### Datasets
 
@@ -17,10 +19,6 @@ This project makes use of the following datasets:
 ### Usage
 
 To run a vanilla autoencoder:
-
-`python autoencoder/train-autoencoder.py <dataset>`
-
-where `dataset` is one of `['mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'tiny-imagenet']`
 
 To run ELM-AE:
 
