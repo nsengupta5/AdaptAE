@@ -15,6 +15,7 @@ License:
 """
 
 from torchvision import datasets, transforms
+import os
 
 """
 Load the data and return the input and hidden nodes
@@ -108,6 +109,7 @@ def load_data(dataset):
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
+            check_tiny_imagenet()
             train_data = datasets.ImageFolder(
                 root = './data/tiny-imagenet-200/train', 
                 transform = transform
@@ -124,6 +126,7 @@ def load_data(dataset):
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
             ])
+            check_tiny_imagenet()
             train_data = datasets.ImageFolder(
                 root = './data/tiny-imagenet-200/train', 
                 transform = transform
@@ -138,3 +141,16 @@ def load_data(dataset):
             raise ValueError(f"Invalid dataset: {dataset}")
 
     return input_nodes, hidden_nodes, train_data, test_data
+
+"""
+Check if Tiny ImageNet dataset exists, if not download it
+"""
+def check_tiny_imagenet():
+    if not os.path.exists('./data'):
+        os.mkdir('./data')
+    if not os.path.exists('./data/tiny-imagenet-200'):
+        print("Downloading Tiny ImageNet dataset")
+        os.system('wget http://cs231n.stanford.edu/tiny-imagenet-200.zip')
+        os.system('unzip tiny-imagenet-200.zip')
+        os.system('rm tiny-imagenet-200.zip')
+        os.system('mv tiny-imagenet-200 ./data')
