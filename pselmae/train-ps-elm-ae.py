@@ -176,7 +176,7 @@ def train_init(model, train_loader, phased):
 
         # Evaluate the model on the initial training data
         pred = model.predict(data)
-        loss, _ = model.evaluate(data, pred)
+        loss, _ = evaluate(model, data, pred)
 
         # Print results
         print_header("Initial Training Benchmarks")
@@ -237,7 +237,7 @@ def train_sequential(model, seq_loader, mode, phased):
                 peak_memory = max(peak_memory, current_memory)
 
         pred = model.predict(data)
-        loss, _ = model.evaluate(data, pred)
+        loss, _ = evaluate(model, data, pred)
         total_loss += loss.item()
 
     end_time = time.time()
@@ -325,7 +325,7 @@ Test the PS-ELM-AE model on the test data
 def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
 
-    losses = []
+    total_loss = 0
     outputs = []
     saved_img = False
     batch_size = test_loader.batch_size
@@ -341,8 +341,8 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 
         # Predict and evaluate the model
         pred = model.predict(data)
-        loss, _ = model.evaluate(data, pred)
-        losses.append(loss.item())
+        loss, _ = evaluate(model, data, pred)
+        total_loss += loss.item()
 
         # If the batch size is less than the number of images we want to generate,
         # save the outputs so we can use multiple batches to generate the desired
@@ -376,8 +376,8 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 
     # Print results
     print_header("Testing Benchmarks")
-    loss = sum(losses) / len(losses)
-    print(f"Total Loss: {loss:.5f}\n")
+    loss = total_loss / len(test_loader)
+    print(f"Total Loss: {loss:.2f}")
 
     # Saving results
     result_data.append(float(str(f"{loss:.5f}")))

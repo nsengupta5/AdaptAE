@@ -25,7 +25,6 @@ class Autoencoder(nn.Module):
         # Encoder with single hidden layer
         self.encoder = nn.Sequential(
             nn.Linear(n_input_nodes, n_hidden_nodes),
-            nn.Sigmoid()
         )
 
         # Decoder with single hidden layer

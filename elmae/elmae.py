@@ -55,25 +55,6 @@ class ELMAE(nn.Module):
         return torch.matmul(H, self.__beta)
 
     """
-    Evaluate the network based on the test data and the predicted data
-    :param test_data: The test data
-    :type test_data: torch.Tensor
-    :param pred_data: The predicted data
-    :type pred_data: torch.Tensor
-    :return: The loss and accuracy
-    :rtype loss: torch.Tensor
-    :rtype accuracy: torch.Tensor
-    """
-    def evaluate(self, test_data, pred_data):
-        assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
-        assert_cond(test_data.shape[1] == self.__n_input_nodes, "Test data shape does not match the input nodes")
-        assert_cond(pred_data.shape[1] == self.__n_input_nodes, "Predicted data shape does not match the input nodes")
-
-        loss = self.__loss_func(test_data, pred_data)
-        accuracy = torch.sum(torch.argmax(self.predict(test_data), dim=1) == torch.argmax(pred_data, dim=1)) / len(pred_data) * 100
-        return loss, accuracy
-
-    """
     Predict the output of ELM-AE for sparse and compressed representations based on the input data
     :param train_data: The train data
     :type train_data: torch.Tensor

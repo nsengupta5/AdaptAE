@@ -30,13 +30,6 @@ class PSELMAE(nn.Module):
         else:
             raise ValueError("Activation function not supported")
 
-        if loss_func == "mse":
-            self.__loss_func = nn.MSELoss()
-        elif loss_func == "cross_entropy":
-            self.__loss_func = nn.CrossEntropyLoss()
-        else:
-            raise ValueError("Loss function not supported")
-
         self.__alpha = nn.Parameter(torch.randn(n_input_nodes, n_hidden_nodes))
         self.__bias = nn.Parameter(torch.randn(n_hidden_nodes))
 
@@ -54,24 +47,6 @@ class PSELMAE(nn.Module):
     def predict(self, test_data):
         H = self.__activation_func(torch.matmul(test_data, self.__alpha) + self.__bias)
         return torch.matmul(H, self.__beta)
-
-    """
-    Evaluate the network based on the test data and the predicted data
-    :param test_data: The test data
-    :type test_data: torch.Tensor
-    :param pred_data: The predicted data
-    :type pred_data: torch.Tensor
-    :return: The loss and accuracy
-    :rtype loss: torch.Tensor
-    :rtype accuracy: torch.Tensor
-    """
-    def evaluate(self, test_data, pred_data):
-        assert_cond(test_data.shape[0] == pred_data.shape[0], "Test data and predicted data do not have the same shape")
-        assert_cond(test_data.shape[1] == self.__n_input_nodes, "Test data shape does not match the input nodes")
-        assert_cond(pred_data.shape[1] == self.__n_input_nodes, "Predicted data shape does not match the input nodes")
-        loss = self.__loss_func(test_data, pred_data)
-        accuracy = torch.sum(torch.argmax(self.predict(test_data), dim=1) == torch.argmax(pred_data, dim=1)) / len(pred_data) * 100
-        return loss, accuracy
 
     """
     Initialize the network based on the input data

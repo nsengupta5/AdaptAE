@@ -136,13 +136,12 @@ def train_model(model, train_loader):
             current_memory = process.memory_info().rss
             peak_memory = max(peak_memory, current_memory)
 
-
         # Calculate time taken and memory used
         time_taken = end_time - start_time
 
         # Evaluate the model
         pred = model.predict(data)
-        loss, _ = model.evaluate(data, pred)
+        loss, _ = evaluate(model, data, pred)
         
         # Print results
         print_header("Training Benchmarks")
@@ -187,7 +186,7 @@ def test_model(model, test_loader, dataset, generate_imgs, num_imgs):
                 results_file
             )
 
-        loss, _ = model.evaluate(data, pred)
+        loss, _ = evaluate(model, data, pred)
 
         # Print results
         print_header("Total Loss")

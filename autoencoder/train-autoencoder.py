@@ -125,7 +125,6 @@ def train_model(model, data_loader, num_epochs):
     # Set the model to training mode
     model.train()
 
-    criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
     # Time and CUDA memory tracking
@@ -148,8 +147,7 @@ def train_model(model, data_loader, num_epochs):
             # Reshape the image to fit the model
             img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
-            train_loss = criterion(recon, img)
-
+            train_loss, _ = evaluate(model, img, recon)
             optimizer.zero_grad()
             train_loss.backward()
             optimizer.step()
@@ -200,7 +198,6 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
     # Set the model to evaluation mode
     model.eval()
 
-    criterion = nn.MSELoss()
     total_loss = 0
     logging.info(f"Testing on {len(data_loader)} batches...")
     saved_img = False
@@ -209,7 +206,7 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
             # Reshape the image to fit the model
             img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
-            loss = criterion(recon, img)
+            loss, _ = evaluate(model, img, recon)
             total_loss += loss.item()
             if gen_imgs:
                 # Only save the first num_imgs images

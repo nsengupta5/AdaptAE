@@ -15,6 +15,8 @@ License:
 
 import logging
 import matplotlib.pyplot as plt
+import torch
+from torch import nn
 import csv
 
 """
@@ -56,6 +58,22 @@ def visualize_comparisons(originals, reconstructions, dataset, num_imgs, results
     # Save the images
     logging.info(f"Saving images to output file...")
     plt.savefig(results_file)
+
+"""
+Evaluate the network based on the test data and the predicted data
+:param test_data: The test data
+:type test_data: torch.Tensor
+:param pred_data: The predicted data
+:type pred_data: torch.Tensor
+:return: The loss and accuracy
+:rtype loss: torch.Tensor
+:rtype accuracy: torch.Tensor
+"""
+def evaluate(model, test_data, pred_data):
+    criterion = nn.MSELoss()
+    loss = criterion(test_data, pred_data)
+    accuracy = 0
+    return loss, accuracy
 
 """
 Save the results to a CSV file
