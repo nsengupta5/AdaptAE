@@ -78,7 +78,7 @@ class ELMAE(nn.Module):
     :param train_data: The train data
     :type train_data: torch.Tensor
     """
-    def calc_beta_sparse(self, train_data):
+    def calc_beta(self, train_data):
         assert_cond(train_data.shape[1] == self.__n_input_nodes, "Train data shape does not match the input nodes")
 
         H = self.__activation_func(torch.matmul(train_data, self.__alpha) + self.__bias)
@@ -92,23 +92,6 @@ class ELMAE(nn.Module):
         H_THI_H_T = lstsq(H_THI, H.T).solution
         
         self.__beta = torch.matmul(H_THI_H_T, train_data)
-
-    """
-    Predict the output of ELM-AE for equal representations based on the input data
-    :param train_data: The train data
-    :type train_data: torch.Tensor
-    """
-    def calc_beta_equal(self, train_data):
-        assert_cond(train_data.shape[1] == self.__n_input_nodes, "Train data shape does not match the input nodes")
-
-        H = self.__activation_func(torch.matmul(train_data, self.__alpha) + self.__bias)
-
-        assert_cond(H.shape[1] == self.__n_hidden_nodes, "Hidden layer shape does not match the hidden nodes")
-        assert_cond(H.shape[0] == train_data.shape[0], "Hidden layer shape does not match the train data")
-
-        self.__beta = lstsq(H, train_data).solution
-        b_Tb = torch.round(torch.round(torch.matmul(self.__beta, self.__beta)))
-        assert_cond(torch.allclose(b_Tb, torch.eye(self.__n_input_nodes).to(self.__device)), "Output layer parameters are not orthogonal")
 
     """
     Return the input shape of the network

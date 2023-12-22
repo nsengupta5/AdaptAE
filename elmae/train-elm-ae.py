@@ -124,7 +124,7 @@ def train_model(model, train_loader):
         # Start time tracking
         start_time = time.time()
 
-        model.calc_beta_sparse(data)
+        model.calc_beta(data)
 
         # End time tracking
         end_time = time.time()

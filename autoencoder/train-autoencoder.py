@@ -121,6 +121,10 @@ Train the autoencoder model
 """
 def train_model(model, data_loader, num_epochs):
     logging.info(f"Training the autoencoder model...")
+    
+    # Set the model to training mode
+    model.train()
+
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
@@ -192,6 +196,10 @@ Test the autoencoder model
 """
 def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
     logging.info(f"Testing the autoencoder model...")
+
+    # Set the model to evaluation mode
+    model.eval()
+
     criterion = nn.MSELoss()
     total_loss = 0
     logging.info(f"Testing on {len(data_loader)} batches...")

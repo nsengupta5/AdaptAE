@@ -5,18 +5,18 @@ Created on: November 6, 2023
 Last Modified: December 12, 2023
 Email: ns214@st-andrews.ac.uk
 
-Description: 
-    This file contains 
+Description:
+    This file contains
 
 License:
     This code is released under the MIT License
 
 Usage:
     python train-ps-elm-ae.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,
-                                        cifar10,cifar100,super-tiny-imagenet,tiny-imagenet} 
-                           [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}] 
-                           [--seq-prop SEQ_PROP] [--generate-imgs] [--save-results] 
-                           [--phased] [--result-strategy {batch-size,seq-prop,total}] 
+                                        cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
+                           [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}]
+                           [--seq-prop SEQ_PROP] [--generate-imgs] [--save-results]
+                           [--phased] [--result-strategy {batch-size,seq-prop,total}]
                            [--num-images NUM_IMAGES]
 
     options:
@@ -26,19 +26,19 @@ Usage:
                             The mode of sequential training (either 'sample' or 'batch')
 
       --dataset {mnist,fashion-mnist,cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
-                            The dataset to use 
-                            (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100', 
+                            The dataset to use
+                            (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100',
                              'super-tiny-imagenet' or 'tiny-imagenet')
 
       --batch-size BATCH_SIZE
                             The batch size to use. Defaults to 10 if not provided
 
       --device {cpu,mps,cuda}
-                            The device to use (either 'cpu', 'mps' or 'cuda'). 
+                            The device to use (either 'cpu', 'mps' or 'cuda').
                             Defaults to 'cuda' if not provided
 
-      --seq-prop SEQ_PROP   The sequential training data proportion. 
-                            Must be between 0.01 and 0.99 inclusive. 
+      --seq-prop SEQ_PROP   The sequential training data proportion.
+                            Must be between 0.01 and 0.99 inclusive.
                             Defaults to 0.99 if not provided
 
       --generate-imgs       Whether to generate images of the reconstructions
@@ -48,13 +48,13 @@ Usage:
       --phased              Whether to monitor and save phased or total performance results
 
       --result-strategy {batch-size,seq-prop,total}
-                            If saving results, the independent variable to vary when 
+                            If saving results, the independent variable to vary when
                             saving results
 
       --num-images NUM_IMAGES
                             The number of images to generate. Defaults to 5 if not provided
 
-Example: python train-ps-elm-ae.py --mode sample --dataset mnist 
+Example: python train-ps-elm-ae.py --mode sample --dataset mnist
 """
 
 from pselmae import PSELMAE
@@ -159,7 +159,7 @@ def train_init(model, train_loader, phased):
                 torch.cuda.reset_peak_memory_stats()
             else:
                 process = psutil.Process()
-                peak_memory = process.memory_info().rss 
+                peak_memory = process.memory_info().rss
 
         start_time = time.time()
 
@@ -229,7 +229,7 @@ def train_sequential(model, seq_loader, mode, phased):
 
         model.seq_phase(data, mode)
 
-        # Set peak memory to the max of the current memory and 
+        # Set peak memory to the max of the current memory and
         # the peak memory if using CPU
         if phased:
             if device == "cpu":
@@ -239,7 +239,7 @@ def train_sequential(model, seq_loader, mode, phased):
         pred = model.predict(data)
         loss, _ = model.evaluate(data, pred)
         total_loss += loss.item()
-    
+
     end_time = time.time()
 
     if phased:
@@ -333,7 +333,7 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
         f"pselmae/results/{dataset}-reconstructions-sample.png"
         if batch_size == 1
         else f"pselmae/results/{dataset}-reconstructions-batch-{batch_size}.png"
-    ) 
+    )
 
     for (data, _) in test_loader:
         # Reshape the data to fit the model
@@ -344,8 +344,8 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
         loss, _ = model.evaluate(data, pred)
         losses.append(loss.item())
 
-        # If the batch size is less than the number of images we want to generate, 
-        # save the outputs so we can use multiple batches to generate the desired 
+        # If the batch size is less than the number of images we want to generate,
+        # save the outputs so we can use multiple batches to generate the desired
         # number of images
         if test_loader.batch_size < num_imgs:
             outputs.append((data, pred))
@@ -357,9 +357,9 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
                         full_data = torch.cat([data for (data, _) in outputs], dim=0)
                         full_pred = torch.cat([pred for (_, pred) in outputs], dim=0)
                         visualize_comparisons(
-                            full_data.cpu().numpy(), 
-                            full_pred.cpu().detach().numpy(), 
-                            dataset, 
+                            full_data.cpu().numpy(),
+                            full_pred.cpu().detach().numpy(),
+                            dataset,
                             num_imgs,
                             results_file
                         )
@@ -384,7 +384,7 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 
     logging.info(f"Testing complete.")
 
-""" 
+"""
 Get the arguments from the command line
 :return mode: The mode of sequential training, either "sample" or "batch"
 :rtype mode: str
@@ -411,8 +411,8 @@ def get_args():
     parser = argparse.ArgumentParser(description="Training a PS-ELM-AE model")
     # Define the arguments
     parser.add_argument(
-        "--mode", 
-        type=str, 
+        "--mode",
+        type=str,
         choices=["sample", "batch"],
         required=True,
         help="The mode of sequential training (either 'sample' or 'batch')"
@@ -486,7 +486,7 @@ def get_args():
 
     # Assume sample mode if no mode is specified
     batch_size = 1
-    if args.mode == "batch": 
+    if args.mode == "batch":
         if args.batch_size is None:
             batch_size = DEFAULT_BATCH_SIZE
         else:
