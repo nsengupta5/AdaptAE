@@ -51,7 +51,7 @@ Usage:
 Example: python train-autoencoder.py --dataset mnist --num-epochs 50
 """
 
-from autoencoder import Autoencoder
+from models.autoencoder import Autoencoder
 from util.util import *
 from util.data import *
 import torch

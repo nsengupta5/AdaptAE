@@ -14,7 +14,11 @@ License:
     This code is released under the MIT License
 """
 
+import torch
 from torchvision import datasets, transforms
+import pandas as pd
+import numpy as np
+import random
 import os
 
 """
@@ -137,6 +141,11 @@ def load_data(dataset):
             )
             input_nodes = 12288
             hidden_nodes = 4096
+        case 'mnist-corrupted':
+            train_data = pd.read_csv('../data/MNIST_CSV/mnist_train.csv')
+            test_data = pd.read_csv('../data/MNIST_CSV/mnist_test_corrupted.csv')
+            input_nodes = 784
+            hidden_nodes = 128
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
@@ -154,3 +163,49 @@ def check_tiny_imagenet():
         os.system('unzip tiny-imagenet-200.zip')
         os.system('rm tiny-imagenet-200.zip')
         os.system('mv tiny-imagenet-200 ./data')
+
+def corrupt_mnist():
+    df = pd.read_csv('./data/MNIST_CSV/mnist_test.csv')
+    anom = df[:1000]
+    clean = df[1000:]
+    for i in range(len(anom)):
+        row = anom.iloc[i]
+        for j in range(len(row) - 1):
+            row[j+1] = min(255, row[j+1] + random.randint(100, 200))
+
+    anom['label'] = 1
+    clean['label'] = 0
+
+    new_test = pd.concat([anom, clean])
+    new_test.sample(frac=1)
+    new_test.to_csv('./data/MNIST_CSV/mnist_test_corrupted.csv', index=False)
+
+class Loader(torch.utils.data.Dataset):
+    def __init__(self):
+        super(Loader, self).__init__()
+        self.dataset = None
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        row = self.dataset.iloc[idx]
+        row = row.drop(labels={'label'})
+        data = torch.from_numpy(np.array(row)/255).float()
+        return data
+    
+class Train_Loader(Loader):
+    def __init__(self):
+        super(Train_Loader, self).__init__()
+        self.dataset = pd.read_csv(
+                       'data/MNIST_CSV/mnist_train.csv',
+                       index_col=False
+        )
+
+class Test_Loader(Loader):
+    def __init__(self):
+        super(Test_Loader, self).__init__()
+        self.dataset = pd.read_csv(
+                       'data/MNIST_CSV/mnist_test_corrupted.csv',
+                       index_col=False
+        )

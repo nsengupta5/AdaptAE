@@ -41,7 +41,7 @@ Usage:
 Example: python train-elm-ae.py --dataset cifar10 
 """
 
-from elmae import ELMAE
+from models.elmae import ELMAE
 from util.data import load_data
 from util.util import *
 import torch

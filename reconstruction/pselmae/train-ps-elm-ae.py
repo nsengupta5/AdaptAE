@@ -57,7 +57,7 @@ Usage:
 Example: python train-ps-elm-ae.py --mode sample --dataset mnist
 """
 
-from pselmae import PSELMAE
+from models.pselmae import PSELMAE
 from util.util import *
 from util.data import *
 import torch
