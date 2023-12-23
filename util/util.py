@@ -36,7 +36,7 @@ def visualize_comparisons(originals, reconstructions, dataset, num_imgs, results
     plt.figure(figsize=(20, 4))
     for i in range(num_imgs): # Display original images
         ax = plt.subplot(2, num_imgs, i + 1)
-        if dataset in ["mnist", "fashion-mnist"]:
+        if dataset in ["mnist", "fashion-mnist", "mnist-corrupted"]:
             plt.imshow(originals[i].reshape(28, 28))
         elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(originals[i].reshape(3, 32, 32).transpose(1, 2, 0))
@@ -47,7 +47,7 @@ def visualize_comparisons(originals, reconstructions, dataset, num_imgs, results
 
         # Display reconstructed images
         ax = plt.subplot(2, num_imgs, i + 1 + num_imgs)
-        if dataset in ["mnist", "fashion-mnist"]:
+        if dataset in ["mnist", "fashion-mnist", "mnist-corrupted"]:
             plt.imshow(reconstructions[i].reshape(28, 28))
         elif dataset in ["cifar10", "cifar100", "super-tiny-imagenet"]:
             plt.imshow(reconstructions[i].reshape(3, 32, 32).transpose(1, 2, 0))

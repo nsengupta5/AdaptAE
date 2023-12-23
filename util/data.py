@@ -142,8 +142,9 @@ def load_data(dataset):
             input_nodes = 12288
             hidden_nodes = 4096
         case 'mnist-corrupted':
-            train_data = pd.read_csv('../data/MNIST_CSV/mnist_train.csv')
-            test_data = pd.read_csv('../data/MNIST_CSV/mnist_test_corrupted.csv')
+            corrupt_mnist()
+            train_data = pd.read_csv('./data/MNIST_CSV/mnist_train.csv')
+            test_data = pd.read_csv('./data/MNIST_CSV/mnist_test_corrupted.csv')
             input_nodes = 784
             hidden_nodes = 128
         case _:
@@ -165,25 +166,30 @@ def check_tiny_imagenet():
         os.system('mv tiny-imagenet-200 ./data')
 
 def corrupt_mnist():
-    df = pd.read_csv('./data/MNIST_CSV/mnist_test.csv')
-    anom = df[:1000]
-    clean = df[1000:]
-    for i in range(len(anom)):
-        row = anom.iloc[i]
-        for j in range(len(row) - 1):
-            row[j+1] = min(255, row[j+1] + random.randint(100, 200))
+    if not os.path.exists('./data'):
+        os.mkdir('./data')
+    if not os.path.exists('./data/MNIST_CSV'):
+        os.mkdir('./data/MNIST_CSV')
+    if not os.path.exists('./data/MNIST_CSV/mnist_test_corrupted.csv'):
+        df = pd.read_csv('./data/MNIST_CSV/mnist_test.csv')
+        anom = df[:1000]
+        clean = df[1000:]
+        for i in range(len(anom)):
+            row = anom.iloc[i]
+            for j in range(len(row) - 1):
+                row[j+1] = min(255, row[j+1] + random.randint(100, 200))
 
-    anom['label'] = 1
-    clean['label'] = 0
+        anom['label'] = 1
+        clean['label'] = 0
 
-    new_test = pd.concat([anom, clean])
-    new_test.sample(frac=1)
-    new_test.to_csv('./data/MNIST_CSV/mnist_test_corrupted.csv', index=False)
+        new_test = pd.concat([anom, clean])
+        new_test.sample(frac=1)
+        new_test.to_csv('./data/MNIST_CSV/mnist_test_corrupted.csv', index=False)
 
 class Loader(torch.utils.data.Dataset):
-    def __init__(self):
+    def __init__(self, dataset=None):
         super(Loader, self).__init__()
-        self.dataset = None
+        self.dataset = dataset
 
     def __len__(self):
         return len(self.dataset)
@@ -197,15 +203,18 @@ class Loader(torch.utils.data.Dataset):
 class Train_Loader(Loader):
     def __init__(self):
         super(Train_Loader, self).__init__()
-        self.dataset = pd.read_csv(
-                       'data/MNIST_CSV/mnist_train.csv',
-                       index_col=False
-        )
+
+        if not self.dataset:
+            self.dataset = pd.read_csv(
+                           'data/MNIST_CSV/mnist_train.csv',
+                           index_col=False
+            )
 
 class Test_Loader(Loader):
     def __init__(self):
         super(Test_Loader, self).__init__()
-        self.dataset = pd.read_csv(
-                       'data/MNIST_CSV/mnist_test_corrupted.csv',
-                       index_col=False
-        )
+        if not self.dataset:
+            self.dataset = pd.read_csv(
+                           'data/MNIST_CSV/mnist_test_corrupted.csv',
+                           index_col=False
+            )
