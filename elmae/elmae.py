@@ -32,13 +32,6 @@ class ELMAE(nn.Module):
         else:
             raise ValueError("Activation function not supported")
 
-        if loss_func == "mse":
-            self.__loss_func = nn.MSELoss()
-        elif loss_func == "cross_entropy":
-            self.__loss_func = nn.CrossEntropyLoss()
-        else:
-            raise ValueError("Loss function not supported")
-
         self.__alpha = nn.Parameter(torch.randn(n_input_nodes, n_hidden_nodes))
         self.__bias = nn.Parameter(torch.randn(n_hidden_nodes))
         self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)
@@ -75,6 +68,16 @@ class ELMAE(nn.Module):
         self.__beta = torch.matmul(H_THI_H_T, train_data)
 
     """
+    Return the encoded representation of the input
+    :param x: The input data
+    :type x: torch.Tensor
+    :return: The encoded representation of the input
+    :rtype: torch.Tensor
+    """
+    def encoded_representation(self, x):
+        return self.__activation_func(torch.matmul(x, self.__alpha) + self.__bias)
+
+    """
     Return the input shape of the network
     :return: The input shape
     :rtype: tuple
@@ -91,3 +94,10 @@ class ELMAE(nn.Module):
     @property
     def hidden_shape(self):
         return (self.__n_hidden_nodes,)
+
+    """
+    Return the device on which the network is running
+    """
+    @property
+    def device(self):
+        return self.__device

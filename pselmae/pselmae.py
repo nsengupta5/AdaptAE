@@ -151,6 +151,16 @@ class PSELMAE(nn.Module):
             self.__beta += torch.matmul(PH_T, THB)
 
     """
+    Return the encoded representation of the input
+    :param x: The input data
+    :type x: torch.Tensor
+    :return: The encoded representation of the input
+    :rtype: torch.Tensor
+    """
+    def encoded_representation(self, x):
+        return self.__activation_func(torch.matmul(x, self.__alpha) + self.__bias)
+
+    """
     Return the input shape of the network
     :return: The input shape of the network
     :rtype: tuple
@@ -167,3 +177,12 @@ class PSELMAE(nn.Module):
     @property
     def hidden_shape(self):
         return (self.__n_hidden_nodes,)
+
+    """
+    Return the device of the network
+    :return: The device of the network
+    :rtype: torch.device
+    """
+    @property
+    def device(self):
+        return self.__device

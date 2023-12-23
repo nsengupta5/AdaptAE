@@ -16,8 +16,10 @@ License:
 import torch.nn as nn
 
 class Autoencoder(nn.Module):
-    def __init__(self, n_input_nodes, n_hidden_nodes):
+    def __init__(self, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
+
+        self.__device = device
 
         self.__n_input_nodes = n_input_nodes
         self.__n_hidden_nodes = n_hidden_nodes
@@ -46,6 +48,16 @@ class Autoencoder(nn.Module):
         return decoded
 
     """
+    Return the encoded representation of the input
+    :param x: The input data
+    :type x: torch.Tensor
+    :return: The encoded representation of the input
+    :rtype: torch.Tensor
+    """
+    def encoded_representation(self, x):
+        return self.encoder(x)
+
+    """
     Return the input shape of the autoencoder
     :return: The input shape of the autoencoder
     :rtype: tuple
@@ -62,3 +74,7 @@ class Autoencoder(nn.Module):
     @property
     def hidden_shape(self):
         return (self.__n_hidden_nodes,)
+
+    @property
+    def device(self):
+        return self.__device

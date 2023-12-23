@@ -176,7 +176,7 @@ def train_init(model, train_loader, phased):
 
         # Evaluate the model on the initial training data
         pred = model.predict(data)
-        loss, _ = evaluate(model, data, pred)
+        loss, _ = evaluate(data, pred)
 
         # Print results
         print_header("Initial Training Benchmarks")
@@ -237,7 +237,7 @@ def train_sequential(model, seq_loader, mode, phased):
                 peak_memory = max(peak_memory, current_memory)
 
         pred = model.predict(data)
-        loss, _ = evaluate(model, data, pred)
+        loss, _ = evaluate(data, pred)
         total_loss += loss.item()
 
     end_time = time.time()
@@ -341,7 +341,7 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 
         # Predict and evaluate the model
         pred = model.predict(data)
-        loss, _ = evaluate(model, data, pred)
+        loss, _ = evaluate(data, pred)
         total_loss += loss.item()
 
         # If the batch size is less than the number of images we want to generate,
@@ -463,7 +463,7 @@ def get_args():
     parser.add_argument(
         "--result-strategy",
         type=str,
-        choices=["batch-size", "seq-prop", "total"],
+        choices=["batch-size", "seq-prop", "all-hyper", "latent", "all"],
         help="If saving results, the independent variable to vary when saving results"
     )
     parser.add_argument(
@@ -536,7 +536,15 @@ def main():
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)
 
     if save_results:
-        save_result_data("pselmae", dataset, phased, result_strategy, result_data)
+        if result_strategy == "latent":
+            latent_file = ( 
+                f"pselmae/plots/latents/{dataset}-latent_representation-sample.png"
+                if mode == "sample"
+                else f"pselmae/plots/latents/{dataset}-latent_representation-batch-{batch_size}.png"
+            )
+            plot_latent_representation(model, test_loader, latent_file)
+        else:
+            save_result_data("pselmae", dataset, phased, result_strategy, result_data)
 
 if __name__ == "__main__":
     main()

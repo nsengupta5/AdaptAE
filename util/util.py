@@ -15,8 +15,9 @@ License:
 
 import logging
 import matplotlib.pyplot as plt
-import torch
+import numpy as np
 from torch import nn
+from sklearn.manifold import TSNE
 import csv
 
 """
@@ -69,11 +70,48 @@ Evaluate the network based on the test data and the predicted data
 :rtype loss: torch.Tensor
 :rtype accuracy: torch.Tensor
 """
-def evaluate(model, test_data, pred_data):
+def evaluate(test_data, pred_data):
     criterion = nn.MSELoss()
     loss = criterion(test_data, pred_data)
     accuracy = 0
     return loss, accuracy
+
+"""
+Plot the latent space representation of the model
+:param model: The model to plot
+:type model: torch.nn.Module
+:param loader: The data loader to use
+:type loader: torch.utils.data.DataLoader
+:param results_file: The file to save the results to
+:type results_file: str
+"""
+def plot_latent_representation(model, loader, results_file):
+    points = []
+    labels = []
+
+    for (img, label) in loader:
+        img = img.reshape(-1, model.input_shape[0]).to(model.device)
+        proj = model.encoded_representation(img)
+        points.append(proj.detach().cpu().numpy())
+        labels.append(label.detach().cpu().numpy())
+
+    points = np.concatenate(points, axis=0)
+    labels = np.concatenate(labels, axis=0)
+
+    tsne = TSNE(n_components=2, random_state=0)
+    tsne_results = tsne.fit_transform(points)
+
+    plt.figure(figsize=(12, 10))
+    num_classes = np.unique(labels).size
+    for i in range(num_classes):
+        indices = labels == i
+        plt.scatter(tsne_results[indices, 0], tsne_results[indices, 1], label=str(i), alpha=0.5)
+
+    plt.title("Latent Space Representation with Class Labels")
+    plt.xlabel("TSNE-1")
+    plt.ylabel("TSNE-2")
+    plt.legend()
+    plt.savefig(results_file)
 
 """
 Save the results to a CSV file

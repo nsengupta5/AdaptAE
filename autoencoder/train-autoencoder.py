@@ -55,7 +55,6 @@ from autoencoder import Autoencoder
 from util.util import *
 from util.data import *
 import torch
-import torch.nn as nn
 import logging
 import time
 import psutil
@@ -78,7 +77,7 @@ Initialize the Autoencoder model
 """
 def autoencoder_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing Autoencoder model...")
-    model = Autoencoder(input_nodes, hidden_nodes).to(device)
+    model = Autoencoder(input_nodes, hidden_nodes, device).to(device)
     logging.info("Initializig autoencoder Autoencoder model complete.\n")
     return model
 
@@ -147,7 +146,7 @@ def train_model(model, data_loader, num_epochs):
             # Reshape the image to fit the model
             img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
-            train_loss, _ = evaluate(model, img, recon)
+            train_loss, _ = evaluate(img, recon)
             optimizer.zero_grad()
             train_loss.backward()
             optimizer.step()
@@ -206,7 +205,7 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
             # Reshape the image to fit the model
             img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
-            loss, _ = evaluate(model, img, recon)
+            loss, _ = evaluate(img, recon)
             total_loss += loss.item()
             if gen_imgs:
                 # Only save the first num_imgs images
@@ -222,7 +221,7 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
                     saved_img = True
 
     # Print results
-    print_header("Total Loss")
+    print_header("Test Benchmarks")
     print(f'Loss: {total_loss/len(data_loader):.5f}\n')
 
     logging.info(f"Testing complete.")
@@ -293,7 +292,7 @@ def get_args():
     parser.add_argument(
         "--result-strategy",
         type=str,
-        choices=["batch-size", "num-epochs", "total"],
+        choices=["batch-size", "num-epochs", "all-hyper", "latent", "all"],
         help="If saving results, the independent variable to vary when saving results"
     )
 
@@ -329,7 +328,7 @@ def main():
                 result_data.append(batch_size)
             case "num-epochs":
                 result_data.append(n_epochs)
-            case "total":
+            case "all-hyper":
                 result_data.append(batch_size)
                 result_data.append(n_epochs)
 
@@ -339,7 +338,10 @@ def main():
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)
 
     if save_results:
-        save_result_data("autoencoder", dataset, None, result_strategy, result_data)
+        if result_strategy == "latent":
+            plot_latent_representation(model, test_loader, f"autoencoder/plots/latents/{dataset}-latent-representation.png")
+        else:
+            save_result_data("autoencoder", dataset, None, result_strategy, result_data)
 
 if __name__ == "__main__":
     main()

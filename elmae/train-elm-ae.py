@@ -261,6 +261,7 @@ def main():
 
     if save_results:
         save_result_data("elmae", dataset, None, None, result_data)
+        plot_latent_representation(model, test_loader, f"elmae/plots/latents/{dataset}-latent-representation.png")
 
 if __name__ == "__main__":
     main()
