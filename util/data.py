@@ -16,9 +16,7 @@ License:
 
 import torch
 from torchvision import datasets, transforms
-import pandas as pd
 import numpy as np
-import random
 import os
 
 """
@@ -141,18 +139,6 @@ def load_data(dataset):
             )
             input_nodes = 12288
             hidden_nodes = 4096
-        case 'mnist-corrupted':
-            corrupt_data(dataset)
-            train_data = pd.read_csv('./data/MNIST_CSV/mnist_train.csv')
-            test_data = pd.read_csv('./data/MNIST_CSV/mnist_test_corrupted.csv')
-            input_nodes = 784
-            hidden_nodes = 128
-        case 'fashion-mnist-corrupted':
-            corrupt_data(dataset)
-            train_data = pd.read_csv('./data/FashionMNIST_CSV/fashion-mnist_train.csv')
-            test_data = pd.read_csv('./data/FashionMNIST_CSV/fashion-mnist_test_corrupted.csv')
-            input_nodes = 784
-            hidden_nodes = 128
         case _:
             raise ValueError(f"Invalid dataset: {dataset}")
 
@@ -171,49 +157,28 @@ def check_tiny_imagenet():
         os.system('rm tiny-imagenet-200.zip')
         os.system('mv tiny-imagenet-200 ./data')
 
-def corrupt_data(dataset):
-    parent_dir = ''
-    if dataset == 'mnist-corrupted':
-        dataset = 'mnist'
-        parent_dir = './data/MNIST_CSV'
-    elif dataset == 'fashion-mnist-corrupted':
-        dataset = 'fashion-mnist'
-        parent_dir = './data/FashionMNIST_CSV'
+def add_noise(img):
+    mean = 0.0
+    std = 0.1
+    sigma = std**0.5
+    gauss = np.random.normal(mean, sigma, img.shape)
+    noisy_img = img + gauss
+    return np.clip(noisy_img, 0, 1)
 
-    if not os.path.exists('./data'):
-        os.mkdir('./data')
-    if not os.path.exists(parent_dir):
-        os.mkdir(parent_dir)
-    if not os.path.exists(f'{parent_dir}/{dataset}_test_corrupted.csv'):
-        df = pd.read_csv(f'{parent_dir}/{dataset}_test.csv')
-        anom = df[:1000]
-        clean = df[1000:]
-        for i in range(len(anom)):
-            row = anom.iloc[i]
-            for j in range(len(row) - 1):
-                row[j+1] = min(255, row[j+1] + random.randint(100, 200))
-
-        anom['label'] = 1
-        clean['label'] = 0
-
-        new_test = pd.concat([anom, clean])
-        new_test.sample(frac=1)
-        new_test.to_csv(f'{parent_dir}/{dataset}_test_corrupted.csv', index=False)
-
-class MyLoader(torch.utils.data.Dataset):
-    def __init__(self, dataset=None):
-        super(MyLoader, self).__init__()
+class NoisyLoader(torch.utils.data.Dataset):
+    def __init__(self, dataset):
+        super(NoisyLoader, self).__init__()
         self.dataset = dataset
+        self.num_noisy_imgs = 1000
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        row = self.dataset.iloc[idx]
-        row = row.drop(labels={'label'})
-        data = torch.from_numpy(np.array(row)/255).float()
-        return data
-    
-class Loader(MyLoader):
-    def __init__(self, dataset):
-        super(Loader, self).__init__(dataset)
+        img, label = self.dataset[idx]
+
+        if idx < self.num_noisy_imgs:
+            noisy_img = add_noise(img.numpy())
+            return torch.from_numpy(noisy_img).float(), label
+        else:
+            return img, label

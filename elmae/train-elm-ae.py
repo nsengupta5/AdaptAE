@@ -42,7 +42,7 @@ Example: python train-elm-ae.py --dataset cifar10
 """
 
 from models.elmae import ELMAE
-from util.data import *
+from util.data import load_data
 from util.util import *
 import torch
 import logging
@@ -93,20 +93,8 @@ def load_and_split_data(dataset):
 
     train_size = len(train_data)
     test_size = len(test_data)
-
-    # Create the data loaders
-    train_loader = torch.utils.data.DataLoader(
-        Loader(train_data),
-        batch_size=train_size,
-        shuffle=True
-    )
-
-    test_loader = torch.utils.data.DataLoader(
-        Loader(test_data),
-        batch_size=test_size,
-        shuffle=False
-    )
-
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = train_size, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = test_size, shuffle = False)
     logging.info(f"Loading and preparing data complete.")
     return train_loader, test_loader, input_nodes, hidden_nodes
 
@@ -121,9 +109,9 @@ def train_model(model, train_loader):
     peak_memory = 0
     process = None
 
-    for _, (data) in enumerate(train_loader):
+    for (data, _) in train_loader:
         # Reshape the data
-        data = data.to(device)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         logging.info(f"Training on {len(data)} samples...")
 
         # Reset peak memory stats
@@ -181,9 +169,10 @@ Test the model
 :type num_imgs: int
 """
 def test_model(model, test_loader, dataset, generate_imgs, num_imgs):
-    for _, (data) in enumerate(test_loader):
+
+    for (data, _) in test_loader:
         # Reshape the data
-        data = data.to(device)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         logging.info(f"Testing on {len(data)} samples...")
         pred = model.predict(data)
 
@@ -218,7 +207,7 @@ def get_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["mnist-corrupted"],
+        choices=["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"],
         required=True,
         help=("The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', "
               "'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')")

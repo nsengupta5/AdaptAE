@@ -59,7 +59,6 @@ import logging
 import time
 import psutil
 import argparse
-import seaborn as sns
 
 # Constants
 DEFAULT_BATCH_SIZE = 64
@@ -97,24 +96,23 @@ Load and split the data
 :return hidden_nodes: The number of hidden nodes
 :rtype hidden_nodes: int
 """
-def load_and_split_data(dataset, batch_size):
+def load_and_split_data(dataset, batch_size, task):
     logging.info(f"Loading and preparing data...")
 
     # Load the data
     input_nodes, hidden_nodes, train_data, test_data = load_data(dataset)
 
     # Create the data loaders
-    train_loader = torch.utils.data.DataLoader(
-        Loader(train_data),
-        batch_size=batch_size,
-        shuffle=True
-    )
+    train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = batch_size, shuffle = True)
 
-    test_loader = torch.utils.data.DataLoader(
-        Loader(test_data),
-        batch_size=batch_size,
-        shuffle=False
-    )
+    if task == "reconstruction":
+        test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = batch_size, shuffle = False)
+    else:
+        test_loader = torch.utils.data.DataLoader(
+            NoisyLoader(test_data),
+            batch_size=batch_size,
+            shuffle=False
+        )
     
     logging.info(f"Loading and preparing data complete.")
     return train_loader, test_loader, input_nodes, hidden_nodes
@@ -152,8 +150,9 @@ def train_model(model, data_loader, num_epochs):
     for epoch in range(num_epochs):
         loss = 0
         epoch_start_time = time.time()
-        for _, (img) in enumerate(data_loader):
-            img = img.to(device)
+        for (img, _) in data_loader:
+            # Reshape the image to fit the model
+            img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
             train_loss, _ = evaluate(img, recon)
             optimizer.zero_grad()
@@ -200,7 +199,7 @@ Test the autoencoder model
 :param num_imgs: The number of images to generate
 :type num_imgs: int
 """
-def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
+def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
     logging.info(f"Testing the autoencoder model...")
 
     # Set the model to evaluation mode
@@ -210,16 +209,16 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
     logging.info(f"Testing on {len(data_loader)} batches...")
     saved_img = False
     with torch.no_grad():
-        for _, (img) in enumerate(data_loader):
+        for (img, _) in data_loader:
             # Reshape the image to fit the model
-            img = img.to(device)
+            img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
             loss, _ = evaluate(img, recon)
             losses.append(loss.item())
             if gen_imgs:
                 # Only save the first num_imgs images
                 if not saved_img:
-                    results_file = f"anomaly_detection/autoencoder/results/{dataset}-reconstructions.png"
+                    results_file = f"autoencoder/results/{dataset}-{task}.png"
                     visualize_comparisons(
                         img.cpu().numpy(), 
                         recon.cpu().numpy(), 
@@ -232,15 +231,9 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
     # Print results
     print_header("Test Benchmarks")
     total_loss = sum(losses)
-    
-    plt.figure(figsize=(12, 6))
-    plt.title("Loss Distribution")
-    sns.distplot(losses, bins=200, kde=False, color="blue")
-    plt.xlabel("Loss")
-    plt.ylabel("Count")
-    plt.show()
-
     print(f'Loss: {total_loss/len(data_loader):.5f}\n')
+
+    plot_loss_distribution(losses, "test")
 
     logging.info(f"Testing complete.")
 
@@ -266,7 +259,7 @@ def get_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["mnist", "fashion-mnist"],
+        choices=["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"],
         required=True,
         help=("The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', "
               "'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')")
@@ -307,6 +300,20 @@ def get_args():
         default=DEFAULT_BATCH_SIZE,
         help="The batch size to use. Defaults to 64 if not provided"
     )
+    parser.add_argument(
+        "--result-strategy",
+        type=str,
+        choices=["batch-size", "num-epochs", "all-hyper", "latent", "all"],
+        help="If saving results, the independent variable to vary when saving results"
+    )
+    parser.add_argument(
+        "--task",
+        type=str,
+        choices=["reconstruction", "anomaly-detection"],
+        required=True,
+        help="The task to perform (either 'reconstruction' or 'anomaly-detection')",
+        default="reconstruction"
+    )
 
     # Parse the arguments
     args = parser.parse_args()
@@ -317,20 +324,44 @@ def get_args():
     num_images = args.num_images
     num_epochs = args.num_epochs
     batch_size = args.batch_size
+    result_strategy = args.result_strategy
+    task = args.task
 
-    return dataset, device, generate_imgs, save_results, num_images, num_epochs, batch_size 
+    if args.save_results:
+        if args.result_strategy is None:
+            # Must specify a result strategy if saving result
+            exit_with_error("Must specify a result strategy if saving results", parser)
+
+    return dataset, device, generate_imgs, save_results, num_images, num_epochs, batch_size, result_strategy, task
 
 def main():
     logging.basicConfig(level=logging.INFO)
 
     # Get the arguments
     global device
-    dataset, device, gen_imgs, save_results, num_imgs, n_epochs, batch_size = get_args()
+    dataset, device, gen_imgs, save_results, num_imgs, n_epochs, batch_size, result_strategy, task = get_args()
 
-    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset + "-corrupted", batch_size)
+    # Append independent variable to result data
+    if save_results:
+        match result_strategy:
+            case "batch-size":
+                result_data.append(batch_size)
+            case "num-epochs":
+                result_data.append(n_epochs)
+            case "all-hyper":
+                result_data.append(batch_size)
+                result_data.append(n_epochs)
+
+    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, batch_size, task)
     model = autoencoder_init(input_nodes, hidden_nodes)
     train_model(model, train_loader, n_epochs)
-    test_model(model, test_loader, dataset, gen_imgs, num_imgs)
+    test_model(model, test_loader, dataset, gen_imgs, num_imgs, task)
+
+    if save_results:
+        if result_strategy == "latent":
+            plot_latent_representation(model, test_loader, f"autoencoder/plots/latents/{dataset}-latent-representation.png")
+        else:
+            save_result_data("autoencoder", dataset, None, result_strategy, result_data)
 
 if __name__ == "__main__":
     main()

@@ -61,8 +61,7 @@ from models.pselmae import PSELMAE
 from util.util import *
 from util.data import *
 import torch
-from sklearn.model_selection import train_test_split
-import seaborn as sns
+from torch.utils.data import random_split
 import logging
 import time
 import warnings
@@ -112,7 +111,7 @@ Load and split the data
 :return hidden_nodes: The number of hidden nodes
 :rtype hidden_nodes: int
 """
-def load_and_split_data(dataset, mode, batch_size, seq_prop):
+def load_and_split_data(dataset, mode, batch_size, seq_prop, task):
     logging.info(f"Loading and preparing data...")
 
     # Set the batch size to 1 if in sample mode
@@ -126,26 +125,19 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
     # Based on the sequential training proportion
     seq_size = int(seq_prop * len(train_data))
     train_size = len(train_data) - seq_size
-    train_data, seq_data = train_test_split(train_data, test_size = seq_size, shuffle = True, random_state=42)
+    train_data, seq_data = random_split(train_data, [train_size, seq_size])
 
-    # Create the data loaders 
-    train_loader = torch.utils.data.DataLoader(
-        Loader(train_data),
-        batch_size = train_size,
-        shuffle = True
-    )
-
-    seq_loader = torch.utils.data.DataLoader(
-        Loader(seq_data),
-        batch_size = batch_size,
-        shuffle = True
-    )
-
-    test_loader = torch.utils.data.DataLoader(
-        Loader(test_data),
-        batch_size = batch_size,
-        shuffle = False
-    )
+    # Create the data loaders
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
+    seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
+    if task == "reconstruction":
+        test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = True)
+    else:
+        test_loader = torch.utils.data.DataLoader(
+            NoisyLoader(test_data),
+            batch_size=batch_size,
+            shuffle=False
+        )
 
     logging.info(f"Loading and preparing data complete.")
     return train_loader, seq_loader, test_loader, input_nodes, hidden_nodes
@@ -163,9 +155,9 @@ def train_init(model, train_loader, phased):
     peak_memory = 0
     process = None
 
-    for _, (data) in enumerate(train_loader):
+    for (data, _) in train_loader:
         # Reshape the data to fit the model
-        data = data.to(device)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
         logging.info(f"Initial training on {len(data)} samples...")
 
         # Don't reset the peak memory if we're monitoring total memory
@@ -238,9 +230,9 @@ def train_sequential(model, seq_loader, mode, phased):
             peak_memory = process.memory_info().rss
 
     start_time = time.time()
-    for _, (data) in enumerate(seq_loader):
+    for (data, _) in seq_loader:
         # Reshape the data to fit the model
-        data = data.to(device)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
 
         model.seq_phase(data, mode)
 
@@ -337,7 +329,7 @@ Test the PS-ELM-AE model on the test data
 :param test_data: The test data
 :type test_data: torch.utils.data.DataLoader
 """
-def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
+def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
 
     losses = []
@@ -345,14 +337,14 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
     saved_img = False
     batch_size = test_loader.batch_size
     results_file = (
-        f"anomaly_detection/pselmae/results/{dataset}-reconstructions-sample.png"
+        f"pselmae/results/{dataset}-{task}-sample.png"
         if batch_size == 1
-        else f"anomaly_detection/pselmae/results/{dataset}-reconstructions-batch-{batch_size}.png"
+        else f"pselmae/results/{dataset}-{task}-batch-{batch_size}.png"
     )
 
-    for _, (data) in enumerate(test_loader):
+    for (data, _) in test_loader:
         # Reshape the data to fit the model
-        data = data.to(device)
+        data = data.reshape(-1, model.input_shape[0]).float().to(device)
 
         # Predict and evaluate the model
         pred = model.predict(data)
@@ -391,19 +383,13 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 
     # Print results
     print_header("Testing Benchmarks")
-    total_loss = sum(losses)
-    loss = total_loss / len(test_loader)
+    loss = sum(losses) / len(test_loader)
     print(f"Total Loss: {loss:.2f}")
 
     # Saving results
     result_data.append(float(str(f"{loss:.5f}")))
 
-    plt.figure(figsize=(12, 6))
-    plt.title("Loss Distribution")
-    sns.distplot(losses, bins=200, kde=False, color="blue")
-    plt.xlabel("Loss")
-    plt.ylabel("Count")
-    plt.show()
+    plot_loss_distribution(losses, "test")
 
     logging.info(f"Testing complete.")
 
@@ -443,7 +429,7 @@ def get_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["mnist", "fashion-mnist"],
+        choices=["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"],
         required=True,
         help=("The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', "
               "'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')")
@@ -495,6 +481,14 @@ def get_args():
         default=DEFAULT_NUM_IMAGES,
         help="The number of images to generate. Defaults to 5 if not provided"
     )
+    parser.add_argument(
+        "--task",
+        type=str,
+        choices=["reconstruction", "anomaly-detection"],
+        required=True,
+        help="The task to perform (either 'reconstruction' or 'anomaly-detection')",
+        default="reconstruction"
+    )
 
     # Parse the arguments
     args = parser.parse_args()
@@ -506,6 +500,7 @@ def get_args():
     phased = args.phased
     result_strategy = args.result_strategy
     num_images = args.num_images
+    task = args.task
 
     # Assume sample mode if no mode is specified
     batch_size = 1
@@ -532,7 +527,7 @@ def get_args():
             # Must specify a result strategy if saving result
             exit_with_error("Must specify a result strategy if saving results", parser)
 
-    return mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy, num_images
+    return mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy, num_images, task
 
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
@@ -540,7 +535,7 @@ def main():
 
     # Get the arguments
     global device
-    mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy, num_imgs = get_args()
+    mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy, num_imgs, task = get_args()
 
     # Append independent variables to result data
     if save_results:
@@ -553,10 +548,10 @@ def main():
                 result_data.append(batch_size)
                 result_data.append(seq_prop)
 
-    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset + "-corrupted", mode, batch_size, seq_prop)
+    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop, task)
     model = pselmae_init(input_nodes, hidden_nodes)
     train_model(model, train_loader, seq_loader, mode, phased)
-    test_model(model, test_loader, dataset, gen_imgs, num_imgs)
+    test_model(model, test_loader, dataset, gen_imgs, num_imgs, task)
 
     if save_results:
         if result_strategy == "latent":

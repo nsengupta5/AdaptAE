@@ -16,6 +16,7 @@ License:
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from torch import nn
 from sklearn.manifold import TSNE
 import csv
@@ -112,6 +113,14 @@ def plot_latent_representation(model, loader, results_file):
     plt.ylabel("TSNE-2")
     plt.legend()
     plt.savefig(results_file)
+
+def plot_loss_distribution(losses, results_file):
+    plt.figure(figsize=(12, 6))
+    plt.title("Loss Distribution")
+    sns.distplot(losses, bins=100, kde=False, color="blue")
+    plt.xlabel("Loss")
+    plt.ylabel("Count")
+    plt.show()
 
 """
 Save the results to a CSV file
