@@ -105,13 +105,13 @@ def load_and_split_data(dataset, batch_size):
 
     # Create the data loaders
     train_loader = torch.utils.data.DataLoader(
-        Train_Loader(),
+        Loader(train_data),
         batch_size=batch_size,
         shuffle=True
     )
 
     test_loader = torch.utils.data.DataLoader(
-        Test_Loader(),
+        Loader(test_data),
         batch_size=batch_size,
         shuffle=False
     )
@@ -235,7 +235,7 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs):
     
     plt.figure(figsize=(12, 6))
     plt.title("Loss Distribution")
-    sns.distplot(losses, bins=20, kde=False, color="blue")
+    sns.distplot(losses, bins=200, kde=False, color="blue")
     plt.xlabel("Loss")
     plt.ylabel("Count")
     plt.show()
@@ -266,7 +266,7 @@ def get_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["mnist-corrupted"],
+        choices=["mnist", "fashion-mnist"],
         required=True,
         help=("The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', "
               "'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')")
@@ -327,7 +327,7 @@ def main():
     global device
     dataset, device, gen_imgs, save_results, num_imgs, n_epochs, batch_size = get_args()
 
-    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, batch_size)
+    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset + "-corrupted", batch_size)
     model = autoencoder_init(input_nodes, hidden_nodes)
     train_model(model, train_loader, n_epochs)
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)

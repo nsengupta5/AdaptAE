@@ -142,9 +142,15 @@ def load_data(dataset):
             input_nodes = 12288
             hidden_nodes = 4096
         case 'mnist-corrupted':
-            corrupt_mnist()
+            corrupt_data(dataset)
             train_data = pd.read_csv('./data/MNIST_CSV/mnist_train.csv')
             test_data = pd.read_csv('./data/MNIST_CSV/mnist_test_corrupted.csv')
+            input_nodes = 784
+            hidden_nodes = 128
+        case 'fashion-mnist-corrupted':
+            corrupt_data(dataset)
+            train_data = pd.read_csv('./data/FashionMNIST_CSV/fashion-mnist_train.csv')
+            test_data = pd.read_csv('./data/FashionMNIST_CSV/fashion-mnist_test_corrupted.csv')
             input_nodes = 784
             hidden_nodes = 128
         case _:
@@ -165,13 +171,21 @@ def check_tiny_imagenet():
         os.system('rm tiny-imagenet-200.zip')
         os.system('mv tiny-imagenet-200 ./data')
 
-def corrupt_mnist():
+def corrupt_data(dataset):
+    parent_dir = ''
+    if dataset == 'mnist-corrupted':
+        dataset = 'mnist'
+        parent_dir = './data/MNIST_CSV'
+    elif dataset == 'fashion-mnist-corrupted':
+        dataset = 'fashion-mnist'
+        parent_dir = './data/FashionMNIST_CSV'
+
     if not os.path.exists('./data'):
         os.mkdir('./data')
-    if not os.path.exists('./data/MNIST_CSV'):
-        os.mkdir('./data/MNIST_CSV')
-    if not os.path.exists('./data/MNIST_CSV/mnist_test_corrupted.csv'):
-        df = pd.read_csv('./data/MNIST_CSV/mnist_test.csv')
+    if not os.path.exists(parent_dir):
+        os.mkdir(parent_dir)
+    if not os.path.exists(f'{parent_dir}/{dataset}_test_corrupted.csv'):
+        df = pd.read_csv(f'{parent_dir}/{dataset}_test.csv')
         anom = df[:1000]
         clean = df[1000:]
         for i in range(len(anom)):
@@ -184,11 +198,11 @@ def corrupt_mnist():
 
         new_test = pd.concat([anom, clean])
         new_test.sample(frac=1)
-        new_test.to_csv('./data/MNIST_CSV/mnist_test_corrupted.csv', index=False)
+        new_test.to_csv(f'{parent_dir}/{dataset}_test_corrupted.csv', index=False)
 
-class Loader(torch.utils.data.Dataset):
+class MyLoader(torch.utils.data.Dataset):
     def __init__(self, dataset=None):
-        super(Loader, self).__init__()
+        super(MyLoader, self).__init__()
         self.dataset = dataset
 
     def __len__(self):
@@ -200,21 +214,6 @@ class Loader(torch.utils.data.Dataset):
         data = torch.from_numpy(np.array(row)/255).float()
         return data
     
-class Train_Loader(Loader):
-    def __init__(self):
-        super(Train_Loader, self).__init__()
-
-        if not self.dataset:
-            self.dataset = pd.read_csv(
-                           'data/MNIST_CSV/mnist_train.csv',
-                           index_col=False
-            )
-
-class Test_Loader(Loader):
-    def __init__(self):
-        super(Test_Loader, self).__init__()
-        if not self.dataset:
-            self.dataset = pd.read_csv(
-                           'data/MNIST_CSV/mnist_test_corrupted.csv',
-                           index_col=False
-            )
+class Loader(MyLoader):
+    def __init__(self, dataset):
+        super(Loader, self).__init__(dataset)

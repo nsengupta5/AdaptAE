@@ -61,7 +61,8 @@ from models.pselmae import PSELMAE
 from util.util import *
 from util.data import *
 import torch
-from torch.utils.data import random_split
+from sklearn.model_selection import train_test_split
+import seaborn as sns
 import logging
 import time
 import warnings
@@ -125,15 +126,25 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop):
     # Based on the sequential training proportion
     seq_size = int(seq_prop * len(train_data))
     train_size = len(train_data) - seq_size
-    train_data, seq_data = random_split(train_data, [train_size, seq_size])
+    train_data, seq_data = train_test_split(train_data, test_size = seq_size, shuffle = True, random_state=42)
 
-    # Create the data loaders
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
-    seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(
-        Test_Loader(),
+    # Create the data loaders 
+    train_loader = torch.utils.data.DataLoader(
+        Loader(train_data),
+        batch_size = train_size,
+        shuffle = True
+    )
+
+    seq_loader = torch.utils.data.DataLoader(
+        Loader(seq_data),
         batch_size = batch_size,
-        shuffle = False,
+        shuffle = True
+    )
+
+    test_loader = torch.utils.data.DataLoader(
+        Loader(test_data),
+        batch_size = batch_size,
+        shuffle = False
     )
 
     logging.info(f"Loading and preparing data complete.")
@@ -152,9 +163,9 @@ def train_init(model, train_loader, phased):
     peak_memory = 0
     process = None
 
-    for (data, _) in train_loader:
+    for _, (data) in enumerate(train_loader):
         # Reshape the data to fit the model
-        data = data.reshape(-1, model.input_shape[0]).float().to(device)
+        data = data.to(device)
         logging.info(f"Initial training on {len(data)} samples...")
 
         # Don't reset the peak memory if we're monitoring total memory
@@ -227,9 +238,9 @@ def train_sequential(model, seq_loader, mode, phased):
             peak_memory = process.memory_info().rss
 
     start_time = time.time()
-    for (data, _) in seq_loader:
+    for _, (data) in enumerate(seq_loader):
         # Reshape the data to fit the model
-        data = data.reshape(-1, model.input_shape[0]).float().to(device)
+        data = data.to(device)
 
         model.seq_phase(data, mode)
 
@@ -329,24 +340,24 @@ Test the PS-ELM-AE model on the test data
 def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
 
-    total_loss = 0
+    losses = []
     outputs = []
     saved_img = False
     batch_size = test_loader.batch_size
     results_file = (
-        f"pselmae/results/{dataset}-reconstructions-sample.png"
+        f"anomaly_detection/pselmae/results/{dataset}-reconstructions-sample.png"
         if batch_size == 1
-        else f"pselmae/results/{dataset}-reconstructions-batch-{batch_size}.png"
+        else f"anomaly_detection/pselmae/results/{dataset}-reconstructions-batch-{batch_size}.png"
     )
 
-    for (data, _) in test_loader:
+    for _, (data) in enumerate(test_loader):
         # Reshape the data to fit the model
-        data = data.reshape(-1, model.input_shape[0]).float().to(device)
+        data = data.to(device)
 
         # Predict and evaluate the model
         pred = model.predict(data)
         loss, _ = evaluate(data, pred)
-        total_loss += loss.item()
+        losses.append(loss.item())
 
         # If the batch size is less than the number of images we want to generate,
         # save the outputs so we can use multiple batches to generate the desired
@@ -380,11 +391,19 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs):
 
     # Print results
     print_header("Testing Benchmarks")
+    total_loss = sum(losses)
     loss = total_loss / len(test_loader)
     print(f"Total Loss: {loss:.2f}")
 
     # Saving results
     result_data.append(float(str(f"{loss:.5f}")))
+
+    plt.figure(figsize=(12, 6))
+    plt.title("Loss Distribution")
+    sns.distplot(losses, bins=200, kde=False, color="blue")
+    plt.xlabel("Loss")
+    plt.ylabel("Count")
+    plt.show()
 
     logging.info(f"Testing complete.")
 
@@ -424,7 +443,7 @@ def get_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["mnist", "fashion-mnist", "cifar10", "cifar100", "super-tiny-imagenet", "tiny-imagenet"],
+        choices=["mnist", "fashion-mnist"],
         required=True,
         help=("The dataset to use (either 'mnist', 'fashion-mnist', 'cifar10', "
               "'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')")
@@ -534,7 +553,7 @@ def main():
                 result_data.append(batch_size)
                 result_data.append(seq_prop)
 
-    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop)
+    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset + "-corrupted", mode, batch_size, seq_prop)
     model = pselmae_init(input_nodes, hidden_nodes)
     train_model(model, train_loader, seq_loader, mode, phased)
     test_model(model, test_loader, dataset, gen_imgs, num_imgs)

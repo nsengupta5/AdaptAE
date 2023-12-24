@@ -96,13 +96,13 @@ def load_and_split_data(dataset):
 
     # Create the data loaders
     train_loader = torch.utils.data.DataLoader(
-        Train_Loader(),
+        Loader(train_data),
         batch_size=train_size,
         shuffle=True
     )
 
     test_loader = torch.utils.data.DataLoader(
-        Test_Loader(),
+        Loader(test_data),
         batch_size=test_size,
         shuffle=False
     )
