@@ -100,6 +100,8 @@ Load and split the data
 :type batch_size: int
 :param seq_prop: The sequential training data proportion
 :type seq_prop: float
+:param task: The task to perform (either 'reconstruction' or 'classification')
+:type task: str
 :return train_loader: The training data loader
 :rtype train_loader: torch.utils.data.DataLoader
 :return seq_loader: The sequential training data loader
@@ -130,9 +132,11 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop, task):
     # Create the data loaders
     train_loader = torch.utils.data.DataLoader(train_data, batch_size = train_size, shuffle = True)
     seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
+
     if task == "reconstruction":
         test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = True)
     else:
+        # Create a noisy test loader for anomaly detection
         test_loader = torch.utils.data.DataLoader(
             NoisyLoader(test_data),
             batch_size=batch_size,
@@ -326,8 +330,16 @@ def train_model(model, train_loader, seq_loader, mode, phased):
 Test the PS-ELM-AE model on the test data
 :param model: The PS-ELM-AE model
 :type model: PSELMAE
-:param test_data: The test data
-:type test_data: torch.utils.data.DataLoader
+:param test_loader: The test data loader
+:type test_loader: torch.utils.data.DataLoader
+:param dataset: The dataset to test on
+:type dataset: str
+:param gen_imgs: The number of generated images to save
+:type gen_imgs: int
+:param num_imgs: The number of images to save
+:type num_imgs: int
+:param task: The task to test on
+:type task: str
 """
 def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
@@ -336,10 +348,16 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
     outputs = []
     saved_img = False
     batch_size = test_loader.batch_size
+
+    result_parent_dir = (
+        "pselmae/results/reconstruction"
+        if task == "reconstruction"
+        else "pselmae/results/anomaly_detection"
+    )
     results_file = (
-        f"pselmae/results/{dataset}-{task}-sample.png"
+        f"{result_parent_dir}/{dataset}-{task}-sample.png"
         if batch_size == 1
-        else f"pselmae/results/{dataset}-{task}-batch-{batch_size}.png"
+        else f"{result_parent_dir}/{dataset}-{task}-batch-{batch_size}.png"
     )
 
     for (data, _) in test_loader:
@@ -389,7 +407,14 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
     # Saving results
     result_data.append(float(str(f"{loss:.5f}")))
 
-    plot_loss_distribution(losses, "test")
+    # Plot the loss distribution for anomaly detection
+    if task == "anomaly-detection":
+        loss_file = (
+            f"pselmae/plots/losses/{dataset}-anomaly-losses-sample.png"
+            if batch_size == 1
+            else f"pselmae/plots/losses/{dataset}-anomaly-losses-batch-{batch_size}.png"
+        )
+        plot_loss_distribution(losses, loss_file)
 
     logging.info(f"Testing complete.")
 
@@ -415,6 +440,8 @@ Get the arguments from the command line
 :rtype result_strategy: str
 :return num_imgs: The number of images to generate
 :rtype num_imgs: int
+:return task: The task to test on
+:rtype task: str
 """
 def get_args():
     parser = argparse.ArgumentParser(description="Training a PS-ELM-AE model")
@@ -423,7 +450,7 @@ def get_args():
         "--mode",
         type=str,
         choices=["sample", "batch"],
-        required=True,
+        default="sample",
         help="The mode of sequential training (either 'sample' or 'batch')"
     )
     parser.add_argument(
@@ -527,42 +554,81 @@ def get_args():
             # Must specify a result strategy if saving result
             exit_with_error("Must specify a result strategy if saving results", parser)
 
-    return mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy, num_images, task
+    return {
+        "mode": mode,
+        "dataset": dataset,
+        "batch_size": batch_size,
+        "device": device,
+        "seq_prop": seq_prop,
+        "gen_imgs": gen_imgs,
+        "save_results": save_results,
+        "phased": phased,
+        "result_strategy": result_strategy,
+        "num_images": num_images,
+        "task": task
+    }
 
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
     logging.basicConfig(level=logging.INFO)
 
     # Get the arguments
+    config = get_args()
     global device
-    mode, dataset, batch_size, device, seq_prop, gen_imgs, save_results, phased, result_strategy, num_imgs, task = get_args()
+    device = config["device"]
 
     # Append independent variables to result data
-    if save_results:
-        match result_strategy:
+    if config["save_results"]:
+        match config["result_strategy"]:
             case "batch-size":
-                result_data.append(batch_size)
+                result_data.append(config["batch_size"])
             case "seq-prop":
-                result_data.append(seq_prop)
+                result_data.append(config["seq_prop"])
             case "total":
-                result_data.append(batch_size)
-                result_data.append(seq_prop)
+                result_data.append(config["batch_size"])
+                result_data.append(config["seq_prop"])
 
-    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, mode, batch_size, seq_prop, task)
+    train_loader, seq_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(
+        config["dataset"],
+        config["mode"], 
+        config["batch_size"],
+        config["seq_prop"], 
+        config["task"]
+    )
     model = pselmae_init(input_nodes, hidden_nodes)
-    train_model(model, train_loader, seq_loader, mode, phased)
-    test_model(model, test_loader, dataset, gen_imgs, num_imgs, task)
+    train_model(
+        model, 
+        train_loader, 
+        seq_loader, 
+        config["mode"], 
+        config["phased"]
+    )
+    test_model(
+        model, 
+        test_loader,
+        config["dataset"],
+        config["gen_imgs"],
+        config["num_images"], 
+        config["task"]
+    )
 
-    if save_results:
-        if result_strategy == "latent":
+    if config["save_results"]:
+        if config["result_strategy"] == "latent" or config["result_strategy"] == "all":
+            latent_dir = "pselmae/plots/latents"
             latent_file = ( 
-                f"pselmae/plots/latents/{dataset}-latent_representation-sample.png"
-                if mode == "sample"
-                else f"pselmae/plots/latents/{dataset}-latent_representation-batch-{batch_size}.png"
+                f"{latent_dir}/{config['dataset']}-latent_representation-sample.png"
+                if config["mode"] == "sample"
+                else f"{latent_dir}/{config['dataset']}-latent_representation-batch-{config['batch_size']}.png"
             )
             plot_latent_representation(model, test_loader, latent_file)
-        else:
-            save_result_data("pselmae", dataset, phased, result_strategy, result_data)
+        if config["result_strategy"] == "all-hyper" or config["result_strategy"] == "all":
+            save_result_data(
+                "pselmae",
+                config["dataset"],
+                config["phased"],
+                config["result_strategy"],
+                result_data
+            )
 
 if __name__ == "__main__":
     main()

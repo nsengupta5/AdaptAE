@@ -58,6 +58,7 @@ import torch
 import logging
 import time
 import psutil
+import warnings
 import argparse
 
 # Constants
@@ -87,6 +88,8 @@ Load and split the data
 :type dataset: str
 :param batch_size: The batch size
 :type batch_size: int
+:param task: The task to perform
+:type task: str
 :return train_loader: The training data loader
 :rtype train_loader: torch.utils.data.DataLoader
 :return test_loader: The test data loader
@@ -108,6 +111,7 @@ def load_and_split_data(dataset, batch_size, task):
     if task == "reconstruction":
         test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = batch_size, shuffle = False)
     else:
+        # Create the noisy data loader
         test_loader = torch.utils.data.DataLoader(
             NoisyLoader(test_data),
             batch_size=batch_size,
@@ -198,6 +202,8 @@ Test the autoencoder model
 :type gen_imgs: bool
 :param num_imgs: The number of images to generate
 :type num_imgs: int
+:param task: The task to perform
+:type task: str
 """
 def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
     logging.info(f"Testing the autoencoder model...")
@@ -218,7 +224,11 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
             if gen_imgs:
                 # Only save the first num_imgs images
                 if not saved_img:
-                    results_file = f"autoencoder/results/{dataset}-{task}.png"
+                    results_file = (
+                        f"autoencoder/results/reconstruction/{dataset}-{task}.png"
+                        if task == "reconstruction"
+                        else f"autoencoder/results/anomaly_detection/{dataset}-{task}.png"
+                    )
                     visualize_comparisons(
                         img.cpu().numpy(), 
                         recon.cpu().numpy(), 
@@ -233,7 +243,8 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
     total_loss = sum(losses)
     print(f'Loss: {total_loss/len(data_loader):.5f}\n')
 
-    plot_loss_distribution(losses, "test")
+    if task == "anomaly-detection":
+        plot_loss_distribution(losses, f"autoencoder/plots/losses/{dataset}-anomaly-losses.png")
 
     logging.info(f"Testing complete.")
 
@@ -253,6 +264,8 @@ Get the arguments from the command line
 :rtype num_epochs: int
 :return batch_size: The batch size
 :rtype batch_size: int
+:return task: The task to perform
+:rtype task: str
 """
 def get_args():
     parser = argparse.ArgumentParser(description='Train an autoencoder model')
@@ -332,36 +345,69 @@ def get_args():
             # Must specify a result strategy if saving result
             exit_with_error("Must specify a result strategy if saving results", parser)
 
-    return dataset, device, generate_imgs, save_results, num_images, num_epochs, batch_size, result_strategy, task
+    return {
+        "dataset": dataset,
+        "device": device,
+        "generate_imgs": generate_imgs,
+        "save_results": save_results,
+        "num_images": num_images,
+        "num_epochs": num_epochs,
+        "batch_size": batch_size,
+        "result_strategy": result_strategy,
+        "task": task
+    }
 
 def main():
+    warnings.filterwarnings("ignore", category=UserWarning)
     logging.basicConfig(level=logging.INFO)
 
     # Get the arguments
+    config = get_args()
     global device
-    dataset, device, gen_imgs, save_results, num_imgs, n_epochs, batch_size, result_strategy, task = get_args()
+    device = config["device"]
 
     # Append independent variable to result data
-    if save_results:
-        match result_strategy:
+    if config["save_results"]:
+        match config["result_strategy"]:
             case "batch-size":
-                result_data.append(batch_size)
+                result_data.append(config["batch_size"])
             case "num-epochs":
-                result_data.append(n_epochs)
+                result_data.append(config["n_epochs"])
             case "all-hyper":
-                result_data.append(batch_size)
-                result_data.append(n_epochs)
+                result_data.append(config["batch_size"])
+                result_data.append(config["num_epochs"])
 
-    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset, batch_size, task)
+    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(
+        config["dataset"], 
+        config["batch_size"],
+        config["task"]
+    )
     model = autoencoder_init(input_nodes, hidden_nodes)
-    train_model(model, train_loader, n_epochs)
-    test_model(model, test_loader, dataset, gen_imgs, num_imgs, task)
+    train_model(model, train_loader, config["num_epochs"])
+    test_model(
+        model, 
+        test_loader, 
+        config["dataset"], 
+        config["generate_imgs"], 
+        config["num_images"], 
+        config["task"]
+    )
 
-    if save_results:
-        if result_strategy == "latent":
-            plot_latent_representation(model, test_loader, f"autoencoder/plots/latents/{dataset}-latent-representation.png")
-        else:
-            save_result_data("autoencoder", dataset, None, result_strategy, result_data)
+    if config["save_results"]:
+        if config["result_strategy"] == "latent" or config["result_strategy"] == "all":
+            plot_latent_representation(
+                model, 
+                test_loader, 
+                f"autoencoder/plots/latents/{config['dataset']}-latent-representation.png"
+            )
+        if config["result_strategy"] == "all-hyper" or config["result_strategy"] == "all":
+            save_result_data(
+                "autoencoder", 
+                config["dataset"], 
+                None, 
+                config["result_strategy"], 
+                config["result_data"]
+            )
 
 if __name__ == "__main__":
     main()

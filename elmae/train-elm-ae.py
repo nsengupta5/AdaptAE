@@ -42,7 +42,7 @@ Example: python train-elm-ae.py --dataset cifar10
 """
 
 from models.elmae import ELMAE
-from util.data import load_data
+from util.data import *
 from util.util import *
 import torch
 import logging
@@ -85,7 +85,7 @@ Load and split the data
 :return hidden_nodes: The number of hidden nodes
 :rtype hidden_nodes: int
 """
-def load_and_split_data(dataset):
+def load_and_split_data(dataset, task):
     logging.info(f"Loading and preparing data...")
 
     # Load the data
@@ -94,7 +94,17 @@ def load_and_split_data(dataset):
     train_size = len(train_data)
     test_size = len(test_data)
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = train_size, shuffle = True)
-    test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = test_size, shuffle = False)
+
+    if task == "reconstruction":
+        test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = test_size, shuffle = False)
+    else:
+        # Create a noisy test loader for anomaly detection
+        test_loader = torch.utils.data.DataLoader(
+            NoisyLoader(test_data),
+            batch_size=test_size,
+            shuffle=False
+        )
+
     logging.info(f"Loading and preparing data complete.")
     return train_loader, test_loader, input_nodes, hidden_nodes
 
@@ -168,7 +178,7 @@ Test the model
 :param num_imgs: The number of images to generate
 :type num_imgs: int
 """
-def test_model(model, test_loader, dataset, generate_imgs, num_imgs):
+def test_model(model, test_loader, dataset, generate_imgs, num_imgs, task):
 
     for (data, _) in test_loader:
         # Reshape the data
@@ -178,7 +188,11 @@ def test_model(model, test_loader, dataset, generate_imgs, num_imgs):
 
         # Visualize the results
         if generate_imgs:
-            results_file = f"elmae/results/{dataset}-reconstructions.png"
+            results_file = (
+                f"elmae/results/reconstruction/{dataset}-{task}.png"
+                if task == "reconstruction"
+                else f"elmae/results/anomaly_detection/{dataset}-{task}.png"
+            )
             visualize_comparisons(
                 data.cpu().numpy(),
                 pred.cpu().detach().numpy(),
@@ -236,6 +250,20 @@ def get_args():
         action="store_true",
         help="Whether to save the results to a CSV file"
     )
+    parser.add_argument(
+        "--result-strategy",
+        type=str,
+        choices=["batch-size", "num-epochs", "all-hyper", "latent", "all"],
+        help="If saving results, the independent variable to vary when saving results"
+    )
+    parser.add_argument(
+        "--task",
+        type=str,
+        choices=["reconstruction", "anomaly-detection"],
+        required=True,
+        help="The task to perform (either 'reconstruction' or 'anomaly-detection')",
+        default="reconstruction"
+    )
 
     # Parse the arguments
     args = parser.parse_args()
@@ -244,8 +272,18 @@ def get_args():
     num_images = args.num_images
     generate_imgs = args.generate_imgs
     save_results = args.save_results
+    task = args.task
+    result_strategy = args.result_strategy
 
-    return dataset, device, num_images, generate_imgs, save_results
+    return {
+        "dataset": dataset,
+        "device": device,
+        "num_images": num_images,
+        "generate_imgs": generate_imgs,
+        "save_results": save_results,
+        "result_strategy": result_strategy,
+        "task": task
+    }
 
 def main():
     warnings.filterwarnings("ignore", category=UserWarning)
@@ -253,16 +291,39 @@ def main():
 
     # Get the arguments
     global device
-    dataset, device, num_images, generate_imgs, save_results = get_args()
+    config = get_args()
+    device = config["device"]
 
-    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(dataset)
+    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(
+        config["dataset"],
+        config["task"]
+    )
     model = elmae_init(input_nodes, hidden_nodes)
     train_model(model, train_loader)
-    test_model(model, test_loader, dataset, generate_imgs, num_images)
+    test_model(
+        model, 
+        test_loader, 
+        config["dataset"], 
+        config["generate_imgs"],
+        config["num_images"],
+        config["task"]
+    )
 
-    if save_results:
-        save_result_data("elmae", dataset, None, None, result_data)
-        plot_latent_representation(model, test_loader, f"elmae/plots/latents/{dataset}-latent-representation.png")
+    if config["save_results"]:
+        if config["result_strategy"] == "latent" or config["result_strategy"] == "all":
+            plot_latent_representation(
+                model,
+                test_loader,
+                f"elmae/plots/latents/{config['dataset']}-latent-representation.png"
+            )
+        if config["result_strategy"] == "all" or config["result_strategy"] == "":
+            save_result_data(
+                "elmae",
+                config["dataset"],
+                None,
+                None,
+                result_data
+            )
 
 if __name__ == "__main__":
     main()

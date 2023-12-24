@@ -115,12 +115,12 @@ def plot_latent_representation(model, loader, results_file):
     plt.savefig(results_file)
 
 def plot_loss_distribution(losses, results_file):
-    plt.figure(figsize=(12, 6))
-    plt.title("Loss Distribution")
+    plt.figure(figsize=(10, 6))
+    plt.title("Loss Distribution of Partially Noisy Test Data")
     sns.distplot(losses, bins=100, kde=False, color="blue")
-    plt.xlabel("Loss")
-    plt.ylabel("Count")
-    plt.show()
+    plt.xlabel("Test Loss")
+    plt.ylabel("Number of Images")
+    plt.savefig(results_file)
 
 """
 Save the results to a CSV file
