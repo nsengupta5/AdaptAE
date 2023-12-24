@@ -85,10 +85,9 @@ Initialize the PS-ELM-AE model
 """
 def pselmae_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing PS-ELM-AE model...")
-    activation_func = 'sigmoid'
-    loss_func = 'mse'
+    activation_func = 'tanh'
     logging.info(f"Initializing PS-ELM-AE model complete.\n")
-    return PSELMAE(activation_func, loss_func, input_nodes, hidden_nodes, device).to(device)
+    return PSELMAE(activation_func, input_nodes, hidden_nodes, device).to(device)
 
 """
 Load and split the data

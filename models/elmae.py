@@ -15,11 +15,12 @@ License:
 import torch
 import torch.nn as nn
 from torch.linalg import lstsq
+from torch.nn import functional as F
 from util.util import assert_cond
 
 class ELMAE(nn.Module):
 
-    def __init__(self, activation_func, loss_func, n_input_nodes, n_hidden_nodes, device):
+    def __init__(self, activation_func, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
 
         self.__n_input_nodes = n_input_nodes
@@ -27,13 +28,18 @@ class ELMAE(nn.Module):
         self.__penalty = 0.0001
         self.__device = device
 
-        if activation_func == "sigmoid":
-            self.__activation_func = torch.sigmoid
+        if activation_func == "tanh":
+            self.__activation_func = torch.tanh
         else:
             raise ValueError("Activation function not supported")
 
         self.__alpha = nn.Parameter(torch.randn(n_input_nodes, n_hidden_nodes))
-        self.__bias = nn.Parameter(torch.randn(n_hidden_nodes))
+        nn.init.orthogonal_(self.__alpha)
+
+        bias = torch.randn(n_hidden_nodes).to(device)
+        bias = F.normalize(bias, p=2, dim=0)  # Normalize the bias vector to have unit norm
+        self.__bias = nn.Parameter(bias)
+
         self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)
 
     """

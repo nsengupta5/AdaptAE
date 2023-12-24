@@ -20,13 +20,13 @@ from torch.linalg import pinv
 
 class PSELMAE(nn.Module):
 
-    def __init__(self, activation_func, loss_func, n_input_nodes, n_hidden_nodes, device):
+    def __init__(self, activation_func, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
 
         self.__n_input_nodes = n_input_nodes
         self.__n_hidden_nodes = n_hidden_nodes
 
-        if activation_func == "sigmoid":
+        if activation_func == "tanh":
             self.__activation_func = torch.tanh
         else:
             raise ValueError("Activation function not supported")
