@@ -32,7 +32,7 @@ class Autoencoder(nn.Module):
         # Decoder with single hidden layer
         self.decoder = nn.Sequential(
             nn.Linear(n_hidden_nodes, n_input_nodes),
-            nn.Sigmoid()
+            nn.Tanh()
         )
 
     """

@@ -131,9 +131,8 @@ Save the results to a CSV file
 :param result_strategy: The result strategy used
 :type result_strategy: str
 """
-def save_result_data(model, dataset, phased, result_strategy, result_data):
-    target_dir = "phased" if phased else "total"
-    with open (f'{model}/data/{target_dir}/{result_strategy}_{dataset}_performance.csv', 'a', newline='') as f:
+def save_result_data(result_data, results_file):
+    with open (results_file, 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(result_data)
 

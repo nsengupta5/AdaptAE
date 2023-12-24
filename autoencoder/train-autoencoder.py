@@ -79,7 +79,7 @@ Initialize the Autoencoder model
 def autoencoder_init(input_nodes, hidden_nodes):
     logging.info(f"Initializing Autoencoder model...")
     model = Autoencoder(input_nodes, hidden_nodes, device).to(device)
-    logging.info("Initializig autoencoder Autoencoder model complete.\n")
+    logging.info("Initialising Autoencoder model complete.\n")
     return model
 
 """

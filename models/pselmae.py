@@ -15,6 +15,7 @@ License:
 import torch
 from util.util import assert_cond
 from torch import nn
+import torch.nn.functional as F
 from torch.linalg import pinv
 
 class PSELMAE(nn.Module):
@@ -26,12 +27,16 @@ class PSELMAE(nn.Module):
         self.__n_hidden_nodes = n_hidden_nodes
 
         if activation_func == "sigmoid":
-            self.__activation_func = torch.sigmoid
+            self.__activation_func = torch.tanh
         else:
             raise ValueError("Activation function not supported")
 
         self.__alpha = nn.Parameter(torch.randn(n_input_nodes, n_hidden_nodes))
-        self.__bias = nn.Parameter(torch.randn(n_hidden_nodes))
+        nn.init.orthogonal_(self.__alpha)
+
+        bias = torch.randn(n_hidden_nodes).to(device)
+        bias = F.normalize(bias, p=2, dim=0)  # Normalize the bias vector to have unit norm
+        self.__bias = nn.Parameter(bias)
 
         self.__p = torch.zeros(n_hidden_nodes, n_hidden_nodes).to(device)
         self.__beta = torch.zeros(n_hidden_nodes, n_input_nodes).to(device)

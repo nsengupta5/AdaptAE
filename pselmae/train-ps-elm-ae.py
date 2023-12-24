@@ -134,7 +134,7 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop, task):
     seq_loader = torch.utils.data.DataLoader(seq_data, batch_size = batch_size, shuffle = True)
 
     if task == "reconstruction":
-        test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = True)
+        test_loader = torch.utils.data.DataLoader(test_data, batch_size, shuffle = False)
     else:
         # Create a noisy test loader for anomaly detection
         test_loader = torch.utils.data.DataLoader(
@@ -621,14 +621,13 @@ def main():
                 else f"{latent_dir}/{config['dataset']}-latent_representation-batch-{config['batch_size']}.png"
             )
             plot_latent_representation(model, test_loader, latent_file)
-        if config["result_strategy"] == "all-hyper" or config["result_strategy"] == "all":
-            save_result_data(
-                "pselmae",
-                config["dataset"],
-                config["phased"],
-                config["result_strategy"],
-                result_data
-            )
+        else:
+            target_dir = "phased" if config["phased"] else "total"
+            config_strat = config["result_strategy"]
+            strat = "total" if config_strat == "all" or config_strat == "all-hyper" else config["result_strategy"]
+            result_file = f"pselmae/data/{target_dir}/{strat}_{config['dataset']}_performance.csv"
+            
+            save_result_data(result_data,result_file)
 
 if __name__ == "__main__":
     main()
