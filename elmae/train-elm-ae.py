@@ -252,7 +252,7 @@ def get_args():
     parser.add_argument(
         "--result-strategy",
         type=str,
-        choices=["batch-size", "num-epochs", "all-hyper", "latent", "all"],
+        choices=["latent", "all"],
         help="If saving results, the independent variable to vary when saving results"
     )
     parser.add_argument(
@@ -309,19 +309,23 @@ def main():
     )
 
     if config["save_results"]:
-        if config["result_strategy"] == "latent" or config["result_strategy"] == "all":
+        result_strat = config["result_strategy"]
+        dataset = config["dataset"]
+        task = config["task"]
+
+        if result_strat in ["latent", "all"]:
             plot_latent_representation(
                 model,
                 test_loader,
-                f"elmae/plots/latents/{config['dataset']}-latent-representation.png"
+                dataset,
+                task,
+                f"elmae/plots/latents/{dataset}-latent-representation-{task}.png"
             )
-        if config["result_strategy"] == "all" or config["result_strategy"] == "":
+        if result_strat == "all":
+            result_file=f"elmae/data/{dataset}-{task}_performance.csv",
             save_result_data(
-                "elmae",
-                config["dataset"],
-                None,
-                None,
-                result_data
+                result_data,
+                result_file
             )
 
 if __name__ == "__main__":
