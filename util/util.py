@@ -86,9 +86,23 @@ Plot the latent space representation of the model
 :param results_file: The file to save the results to
 :type results_file: str
 """
-def plot_latent_representation(model, loader, results_file):
+def plot_latent_representation(model, loader, dataset, task, results_file):
     points = []
     labels = []
+
+    task_names = {
+        "reconstruction": "Reconstruction",
+        "anomaly-detection": "Anomaly Detection",
+    }
+
+    dataset_names = {
+        "mnist": "MNIST",
+        "fashion-mnist": "Fashion-MNIST",
+        "cifar10": "CIFAR-10",
+        "cifar100": "CIFAR-100",
+        "super-tiny-imagenet": "Super Tiny ImageNet",
+        "tiny-imagenet": "Tiny ImageNet"
+    }
 
     for (img, label) in loader:
         img = img.reshape(-1, model.input_shape[0]).to(model.device)
@@ -104,19 +118,37 @@ def plot_latent_representation(model, loader, results_file):
 
     plt.figure(figsize=(12, 10))
     num_classes = np.unique(labels).size
+
+    # Check for 'dataset' attribute to determine how to access class names
+    if hasattr(loader.dataset, 'dataset') and hasattr(loader.dataset.dataset, 'classes'):
+        class_names = loader.dataset.dataset.classes
+    elif hasattr(loader.dataset, 'classes'):
+        class_names = loader.dataset.classes
+    else:
+        class_names = [str(i) for i in range(num_classes)]
+
     for i in range(num_classes):
         indices = labels == i
-        plt.scatter(tsne_results[indices, 0], tsne_results[indices, 1], label=str(i), alpha=0.5)
+        plt.scatter(tsne_results[indices, 0], tsne_results[indices, 1], label=class_names[i], alpha=0.5)
 
-    plt.title("Latent Space Representation with Class Labels")
-    plt.xlabel("TSNE-1")
-    plt.ylabel("TSNE-2")
+    plt.title(f"{model.name} Latent Space Representation of the {dataset_names[dataset]} Dataset for {task_names[task]}")
+    plt.xlabel("t-SNE Dimension 1")
+    plt.ylabel("t-SNE Dimension 2")
     plt.legend()
     plt.savefig(results_file)
 
-def plot_loss_distribution(losses, results_file):
+def plot_loss_distribution(model_name, losses, dataset, results_file):
+    dataset_names = {
+        "mnist": "MNIST",
+        "fashion-mnist": "Fashion-MNIST",
+        "cifar10": "CIFAR-10",
+        "cifar100": "CIFAR-100",
+        "super-tiny-imagenet": "Super Tiny ImageNet",
+        "tiny-imagenet": "Tiny ImageNet"
+    }
+
     plt.figure(figsize=(10, 6))
-    plt.title("Loss Distribution of Partially Noisy Test Data")
+    plt.title(f"{model_name} Loss Distribution of Partially Noisy {dataset_names[dataset]} Test Dataset")
     sns.distplot(losses, bins=100, kde=False, color="blue")
     plt.xlabel("Test Loss")
     plt.ylabel("Number of Images")

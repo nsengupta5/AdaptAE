@@ -19,6 +19,7 @@ class Autoencoder(nn.Module):
     def __init__(self, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
 
+        self.__name = "Autoencoder"
         self.__device = device
 
         self.__n_input_nodes = n_input_nodes
@@ -75,6 +76,20 @@ class Autoencoder(nn.Module):
     def hidden_shape(self):
         return (self.__n_hidden_nodes,)
 
+    """
+    Return the device on which the autoencoder is running
+    :return: The device on which the autoencoder is running
+    :rtype: torch.device
+    """
     @property
     def device(self):
         return self.__device
+
+    """
+    Return the name of the autoencoder
+    :return: The name of the autoencoder
+    :rtype: str
+    """
+    @property
+    def name(self):
+        return self.__name

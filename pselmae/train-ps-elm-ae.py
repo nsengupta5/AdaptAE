@@ -263,7 +263,7 @@ def train_sequential(model, seq_loader, mode, phased):
         print(f"Peak memory allocated during training: {peak_memory:.2f} MB")
     training_time = end_time - start_time
     print(f"Time taken: {training_time:.2f} seconds.")
-    print(f"Average loss per batch: {total_loss / len(seq_loader):.2f}")
+    print(f"Average loss per batch: {total_loss / len(seq_loader):.5f}")
 
     # Saving results
     if phased:
@@ -401,7 +401,7 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
     # Print results
     print_header("Testing Benchmarks")
     loss = sum(losses) / len(test_loader)
-    print(f"Total Loss: {loss:.2f}")
+    print(f"Total Loss: {loss:.5f}")
 
     # Saving results
     result_data.append(float(str(f"{loss:.5f}")))
@@ -413,7 +413,7 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
             if batch_size == 1
             else f"pselmae/plots/losses/{dataset}-anomaly-losses-batch-{batch_size}.png"
         )
-        plot_loss_distribution(losses, loss_file)
+        plot_loss_distribution(model.name, losses, dataset, loss_file)
 
     logging.info(f"Testing complete.")
 
@@ -583,7 +583,7 @@ def main():
                 result_data.append(config["batch_size"])
             case "seq-prop":
                 result_data.append(config["seq_prop"])
-            case "total":
+            case "all-hyper" | "all":
                 result_data.append(config["batch_size"])
                 result_data.append(config["seq_prop"])
 
@@ -612,20 +612,23 @@ def main():
     )
 
     if config["save_results"]:
-        if config["result_strategy"] == "latent" or config["result_strategy"] == "all":
+        result_strat = config["result_strategy"]
+        dataset = config["dataset"]
+        mode = config["mode"]
+        batch_size = config["batch_size"]
+        phased = config["phased"]
+        task = config["task"]
+
+        if result_strat in ["latent", "all"]:
             latent_dir = "pselmae/plots/latents"
-            latent_file = ( 
-                f"{latent_dir}/{config['dataset']}-latent_representation-sample.png"
-                if config["mode"] == "sample"
-                else f"{latent_dir}/{config['dataset']}-latent_representation-batch-{config['batch_size']}.png"
-            )
-            plot_latent_representation(model, test_loader, latent_file)
-        else:
-            target_dir = "phased" if config["phased"] else "total"
-            config_strat = config["result_strategy"]
-            strat = "total" if config_strat == "all" or config_strat == "all-hyper" else config["result_strategy"]
-            result_file = f"pselmae/data/{target_dir}/{strat}_{config['dataset']}_performance.csv"
-            
+            latent_file = f"{latent_dir}/{dataset}-latent_representation-{task}"
+            latent_file += "-sample.png" if mode == "sample" else f"-batch-{batch_size}.png"
+            plot_latent_representation(model, test_loader, dataset, task, latent_file)
+
+        if result_strat in ["batch-size", "all-hyper", "seq-prop", "all"]:
+            target_dir = "phased" if phased else "total"
+            strat = "total" if result_strat in ["all", "all-hyper"] else result_strat
+            result_file = f"pselmae/data/{target_dir}/{strat}_{dataset}_{task}_performance.csv"
             save_result_data(result_data,result_file)
 
 if __name__ == "__main__":

@@ -23,6 +23,7 @@ class ELMAE(nn.Module):
     def __init__(self, activation_func, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
 
+        self.__name = "ELMAE"
         self.__n_input_nodes = n_input_nodes
         self.__n_hidden_nodes = n_hidden_nodes
         self.__penalty = 0.0001
@@ -103,7 +104,18 @@ class ELMAE(nn.Module):
 
     """
     Return the device on which the network is running
+    :return: The device
+    :rtype: torch.device
     """
     @property
     def device(self):
         return self.__device
+
+    """
+    Return the name of the network
+    :return: The name
+    :rtype: str
+    """
+    @property
+    def name(self):
+        return self.__name

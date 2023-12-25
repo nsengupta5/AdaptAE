@@ -23,6 +23,7 @@ class PSELMAE(nn.Module):
     def __init__(self, activation_func, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
 
+        self.__name = "PSELMAE"
         self.__n_input_nodes = n_input_nodes
         self.__n_hidden_nodes = n_hidden_nodes
 
@@ -191,3 +192,12 @@ class PSELMAE(nn.Module):
     @property
     def device(self):
         return self.__device
+
+    """
+    Return the name of the network
+    :return: The name of the network
+    :rtype: str
+    """
+    @property
+    def name(self):
+        return self.__name
