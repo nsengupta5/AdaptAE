@@ -244,7 +244,8 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
     print(f'Loss: {total_loss/len(data_loader):.5f}\n')
 
     if task == "anomaly-detection":
-        plot_loss_distribution(losses, f"autoencoder/plots/losses/{dataset}-anomaly-losses.png")
+        loss_file = f"autoencoder/plots/losses/{dataset}-anomaly-losses.png"
+        plot_loss_distribution(model.name, losses, dataset, loss_file)
 
     logging.info(f"Testing complete.")
 
@@ -394,19 +395,23 @@ def main():
     )
 
     if config["save_results"]:
-        if config["result_strategy"] == "latent" or config["result_strategy"] == "all":
+        result_strat = config["result_strategy"]
+        dataset = config["dataset"]
+        task = config["task"]
+
+        if result_strat in ["latent", "all"]:
             plot_latent_representation(
                 model, 
                 test_loader, 
-                f"autoencoder/plots/latents/{config['dataset']}-latent-representation.png"
+                dataset,
+                task,
+                f"autoencoder/plots/latents/{dataset}-latent-representation-{task}.png",
             )
-        if config["result_strategy"] == "all-hyper" or config["result_strategy"] == "all":
+        if result_strat in ["all-hyper", "all"]:
+            strat = "total" if result_strat in ["all", "all-hyper"] else result_strat
             save_result_data(
-                "autoencoder", 
-                config["dataset"], 
-                None, 
-                config["result_strategy"], 
-                config["result_data"]
+                config["result_data"],
+                f"autoencoder/results/{strat}_{dataset}-{task}-performance.csv"
             )
 
 if __name__ == "__main__":
