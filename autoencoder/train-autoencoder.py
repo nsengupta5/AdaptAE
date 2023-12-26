@@ -55,11 +55,14 @@ from models.autoencoder import Autoencoder
 from util.util import *
 from util.data import *
 import torch
+from torch.utils.data import random_split
 import logging
 import time
 import psutil
 import warnings
 import argparse
+from skorch import NeuralNetRegressor
+from sklearn.model_selection import GridSearchCV
 
 # Constants
 DEFAULT_BATCH_SIZE = 64
@@ -105,8 +108,15 @@ def load_and_split_data(dataset, batch_size, task):
     # Load the data
     input_nodes, hidden_nodes, train_data, test_data = load_data(dataset)
 
+    train_size = int(0.8 * len(train_data))  
+    valid_size = len(train_data) - train_size  
+
+    train_data, valid_data = random_split(train_data, [train_size, valid_size])
+
     # Create the data loaders
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = batch_size, shuffle = True)
+
+    valid_loader = torch.utils.data.DataLoader(dataset=valid_data, batch_size = batch_size, shuffle = True)
 
     if task == "reconstruction":
         test_loader = torch.utils.data.DataLoader(dataset=test_data, batch_size = batch_size, shuffle = False)
@@ -119,7 +129,7 @@ def load_and_split_data(dataset, batch_size, task):
         )
     
     logging.info(f"Loading and preparing data complete.")
-    return train_loader, test_loader, input_nodes, hidden_nodes
+    return train_loader, valid_loader, test_loader, input_nodes, hidden_nodes
 
 """
 Train the autoencoder model
@@ -130,13 +140,14 @@ Train the autoencoder model
 :param num_epochs: The number of epochs to train for
 :type num_epochs: int
 """
-def train_model(model, data_loader, num_epochs):
+def train_model(model, train_loader, valid_loader, num_epochs):
     logging.info(f"Training the autoencoder model...")
     
     # Set the model to training mode
     model.train()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+    losses = []
+    times = []
 
     # Time and CUDA memory tracking
     peak_memory = 0
@@ -146,15 +157,19 @@ def train_model(model, data_loader, num_epochs):
     elif device == 'cpu':
         process = psutil.Process()
 
-    logging.info(f"Training on {len(data_loader)} batches...")
-    losses = []
-    times = []
-
     start_time = time.time()
+
+    # Find the best parameters
+    logging.info(f"Finding the best parameters...")
+    best_lr, best_weight_decay = find_best_params(model.input_shape[0], model.hidden_shape[0], valid_loader)
+    optimizer = torch.optim.Adam(model.parameters(), lr=best_lr, weight_decay=best_weight_decay)
+    logging.info(f"Finding the best parameters complete.\n")
+
+    logging.info(f"Training on {len(train_loader)} batches...")
     for epoch in range(num_epochs):
         loss = 0
         epoch_start_time = time.time()
-        for (img, _) in data_loader:
+        for (img, _) in train_loader:
             # Reshape the image to fit the model
             img = img.reshape(-1, model.input_shape[0]).to(device)
             recon = model(img)
@@ -165,7 +180,7 @@ def train_model(model, data_loader, num_epochs):
             loss += train_loss.item()
 
         epoch_end_time = time.time()
-        loss /= len(data_loader)
+        loss /= len(train_loader)
 
         if device == "cpu":
             curr_memory = process.memory_info().rss
@@ -248,6 +263,44 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
         plot_loss_distribution(model.name, losses, dataset, loss_file)
 
     logging.info(f"Testing complete.")
+
+def find_best_params(input_nodes, hidden_nodes, valid_loader):
+    all_features = []
+    for batch_features, _ in valid_loader:
+        # Flatten the batch features if necessary and convert to numpy array
+        batch_features = batch_features.view(batch_features.size(0), -1).numpy()
+        all_features.append(batch_features)
+
+    # Concatenate all batches
+    train_data = np.concatenate(all_features, axis=0)
+
+    autoencoder_net = NeuralNetRegressor(
+        module=Autoencoder,
+        module__n_input_nodes=input_nodes,
+        module__n_hidden_nodes=hidden_nodes,
+        module__device=device,
+        device=device,
+        criterion=nn.MSELoss,
+        max_epochs=10,
+        lr=1e-1,
+        batch_size=64,
+        optimizer=torch.optim.Adam,
+        optimizer__weight_decay=1e-5,
+    )
+
+    param_grid = {
+        'lr': [1e-1, 1e-2, 1e-3],
+        'optimizer__weight_decay': [1e-3, 1e-4, 1e-5]
+    }
+
+    # Set up GridSearchCV
+    grid = GridSearchCV(autoencoder_net, param_grid, refit=False, cv=3, scoring='neg_mean_squared_error')
+    grid.fit(train_data, train_data)
+
+    # Print the best parameters
+    print_header("Best Parameters")
+    print(f"Best parameters: {grid.best_params_}")
+    return grid.best_params_['lr'], grid.best_params_['optimizer__weight_decay']
 
 """
 Get the arguments from the command line
@@ -378,13 +431,13 @@ def main():
                 result_data.append(config["batch_size"])
                 result_data.append(config["num_epochs"])
 
-    train_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(
+    train_loader, valid_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(
         config["dataset"], 
         config["batch_size"],
         config["task"]
     )
     model = autoencoder_init(input_nodes, hidden_nodes)
-    train_model(model, train_loader, config["num_epochs"])
+    train_model(model, train_loader, valid_loader, config["num_epochs"])
     test_model(
         model, 
         test_loader, 

@@ -122,6 +122,14 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop, task):
     # Load the data
     input_nodes, hidden_nodes, train_data, test_data = load_data(dataset)
 
+    train_size = int(0.8 * len(train_data))  
+    valid_size = len(train_data) - train_size  
+
+    # Split the training data into training and validation data
+    # so it trains on the same quantity of data as the autoencoder
+    # model. The validation set is not used in training.
+    train_data, _ = random_split(train_data, [train_size, valid_size])
+
     # Split the training data into training and sequential data
     # Based on the sequential training proportion
     seq_size = int(seq_prop * len(train_data))

@@ -90,8 +90,13 @@ def load_and_split_data(dataset, task):
     # Load the data
     input_nodes, hidden_nodes, train_data, test_data = load_data(dataset)
 
-    train_size = len(train_data)
+    # Training set reduced to 80% of original size
+    # to match the quantity of the training set of
+    # the autoencoder model
+    train_size = int(0.8 * len(train_data))  
+
     test_size = len(test_data)
+
     train_loader = torch.utils.data.DataLoader(dataset=train_data, batch_size = train_size, shuffle = True)
 
     if task == "reconstruction":
