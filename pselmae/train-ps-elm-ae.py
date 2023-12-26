@@ -278,6 +278,8 @@ def train_sequential(model, seq_loader, mode, phased):
         result_data.append(training_time)
         result_data.append(round(peak_memory, 2))
         result_data.append(float(str(f"{(total_loss / len(seq_loader)):3f}")))
+    else:
+        result_data.append(float(str(f"{(total_loss / len(seq_loader)):3f}")))
 
     logging.info(f"Sequential training complete")
 
@@ -348,7 +350,7 @@ Test the PS-ELM-AE model on the test data
 :param task: The task to test on
 :type task: str
 """
-def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
+def test_model(model, test_loader, dataset, gen_imgs, num_imgs, seq_prop, task):
     logging.info(f"Testing on {len(test_loader.dataset)} batches...")
 
     losses = []
@@ -362,7 +364,7 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
         else "pselmae/results/anomaly_detection"
     )
     results_file = (
-        f"{result_parent_dir}/{dataset}-{task}-sample.png"
+        f"{result_parent_dir}/{dataset}-{task}-sample-{seq_prop}.png"
         if batch_size == 1
         else f"{result_parent_dir}/{dataset}-{task}-batch-{batch_size}.png"
     )
@@ -417,7 +419,7 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, task):
     # Plot the loss distribution for anomaly detection
     if task == "anomaly-detection":
         loss_file = (
-            f"pselmae/plots/losses/{dataset}-anomaly-losses-sample.png"
+            f"pselmae/plots/losses/{dataset}-anomaly-losses-sample-{seq_prop}.png"
             if batch_size == 1
             else f"pselmae/plots/losses/{dataset}-anomaly-losses-batch-{batch_size}.png"
         )
@@ -616,7 +618,8 @@ def main():
         config["dataset"],
         config["gen_imgs"],
         config["num_images"], 
-        config["task"]
+        config["seq_prop"],
+        config["task"],
     )
 
     if config["save_results"]:
@@ -626,11 +629,12 @@ def main():
         batch_size = config["batch_size"]
         phased = config["phased"]
         task = config["task"]
+        seq_prop = config["seq_prop"]
 
         if result_strat in ["latent", "all"]:
             latent_dir = "pselmae/plots/latents"
             latent_file = f"{latent_dir}/{dataset}-latent_representation-{task}"
-            latent_file += "-sample.png" if mode == "sample" else f"-batch-{batch_size}.png"
+            latent_file += f"-sample-{seq_prop}.png" if mode == "sample" else f"-batch-{batch_size}.png"
             plot_latent_representation(model, test_loader, dataset, task, latent_file)
 
         if result_strat in ["batch-size", "all-hyper", "seq-prop", "all"]:

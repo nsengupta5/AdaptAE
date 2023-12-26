@@ -45,6 +45,7 @@ from models.elmae import ELMAE
 from util.data import *
 from util.util import *
 import torch
+from torch.utils.data import random_split
 import logging
 import time
 import warnings
@@ -93,7 +94,10 @@ def load_and_split_data(dataset, task):
     # Training set reduced to 80% of original size
     # to match the quantity of the training set of
     # the autoencoder model
-    train_size = int(0.8 * len(train_data))  
+    train_size = int(0.8 * len(train_data))
+    valid_size = len(train_data) - train_size
+
+    train_data, _ = random_split(train_data, [train_size, valid_size])
 
     test_size = len(test_data)
 
@@ -165,9 +169,9 @@ def train_model(model, train_loader):
         print(f"Loss: {loss.item():.5f}")
 
         # Save results
-        result_data.append(peak_memory)
         result_data.append(time_taken)
-        result_data.append(loss.item())
+        result_data.append(round(peak_memory, 2))
+        result_data.append(float(str(f"{loss.item():3f}")))
 
         logging.info(f"Training complete.\n")
 
@@ -212,7 +216,7 @@ def test_model(model, test_loader, dataset, generate_imgs, num_imgs, task):
         print(f"Loss: {loss.item():.5f}")
 
         # Save results
-        result_data.append(loss.item())
+        result_data.append(float(str(f"{loss.item():3f}")))
 
         logging.info(f"Testing complete.\n")
 
@@ -302,8 +306,11 @@ def main():
         config["dataset"],
         config["task"]
     )
+
     model = elmae_init(input_nodes, hidden_nodes)
+
     train_model(model, train_loader)
+
     test_model(
         model, 
         test_loader, 
@@ -327,7 +334,7 @@ def main():
                 f"elmae/plots/latents/{dataset}-latent-representation-{task}.png"
             )
         if result_strat == "all":
-            result_file=f"elmae/data/{dataset}-{task}_performance.csv",
+            result_file=f"elmae/data/{dataset}_{task}_performance.csv"
             save_result_data(
                 result_data,
                 result_file

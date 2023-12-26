@@ -199,9 +199,14 @@ def train_model(model, train_loader, valid_loader, num_epochs):
 
     # Print the training benchmarks
     print_header("Training Benchmarks")
-    print(f"Peak memory allocated during training: {peak_memory / (1024 ** 2):.2f} MB")
+    peak_memory_allocated = peak_memory / (1024 ** 2)
+    avg_loss = np.median(losses)
+    print(f"Peak memory allocated during training: {peak_memory_allocated:.2f} MB")
     print(f"Time taken: {training_time:.2f} seconds.")
-    print(f"Average loss per epoch: {sum(losses) / len(losses):.5f}\n")
+    print(f"Average loss per epoch: {avg_loss:.5f}")
+    result_data.append(training_time)
+    result_data.append(round(peak_memory_allocated, 2))
+    result_data.append(float(str(f"{avg_loss:.3f}")))
 
     logging.info(f"Training complete.\n")
 
@@ -255,8 +260,9 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
 
     # Print results
     print_header("Test Benchmarks")
-    total_loss = sum(losses)
-    print(f'Loss: {total_loss/len(data_loader):.5f}\n')
+    loss = sum(losses) / len(losses)
+    print(f'Loss: {loss:.5f}\n')
+    result_data.append(float(str(f"{loss:.3f}")))
 
     if task == "anomaly-detection":
         loss_file = f"autoencoder/plots/losses/{dataset}-anomaly-losses.png"
@@ -267,7 +273,6 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
 def find_best_params(input_nodes, hidden_nodes, valid_loader):
     all_features = []
     for batch_features, _ in valid_loader:
-        batch_features = batch_features.to(device)
         # Flatten the batch features if necessary and convert to numpy array
         batch_features = batch_features.view(batch_features.size(0), -1).numpy()
         all_features.append(batch_features)
@@ -428,7 +433,7 @@ def main():
                 result_data.append(config["batch_size"])
             case "num-epochs":
                 result_data.append(config["n_epochs"])
-            case "all-hyper":
+            case "all-hyper" | "all":
                 result_data.append(config["batch_size"])
                 result_data.append(config["num_epochs"])
 
@@ -464,8 +469,8 @@ def main():
         if result_strat in ["all-hyper", "all"]:
             strat = "total" if result_strat in ["all", "all-hyper"] else result_strat
             save_result_data(
-                config["result_data"],
-                f"autoencoder/results/{strat}_{dataset}-{task}-performance.csv"
+                result_data,
+                f"autoencoder/data/{strat}_{dataset}_{task}_performance.csv"
             )
 
 if __name__ == "__main__":
