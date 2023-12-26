@@ -267,6 +267,7 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
 def find_best_params(input_nodes, hidden_nodes, valid_loader):
     all_features = []
     for batch_features, _ in valid_loader:
+        batch_features = batch_features.to(device)
         # Flatten the batch features if necessary and convert to numpy array
         batch_features = batch_features.view(batch_features.size(0), -1).numpy()
         all_features.append(batch_features)
