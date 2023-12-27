@@ -68,30 +68,30 @@ fi
 if [ "$1" == "all" ]; then
     # Print floating points from 0.1 to 0.9 with 0.1 increment
     for i in $(seq 0.05 0.05 0.95); do
-        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy total
+        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy all-hyper --task reconstruction
     done
 
     for i in $(seq 0.96 0.01 0.99); do
-        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy total
+        python pselmae/train-ps-elm-ae.py --mode sample --dataset "$DATASET" --seq-prop $i $PHASED_FLAG --save-results --result-strategy all-hyper --task reconstruction
     done
 
     for i in $(seq 2 1 4); do
         for j in $(seq 0.05 0.05 0.95); do
-            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy all-hyper --task reconstruction
         done
 
         for j in $(seq 0.96 0.01 0.99); do
-            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy all-hyper --task reconstruction
         done
     done
 
     for i in $(seq 5 5 100); do
         for j in $(seq 0.05 0.05 0.95); do
-            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy all-hyper --task reconstruction
         done
 
         for j in $(seq 0.96 0.01 0.99); do
-            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy total
+            python pselmae/train-ps-elm-ae.py --mode batch --batch-size "$i" --dataset "$DATASET" --seq-prop $j $PHASED_FLAG --save-results --result-strategy all-hyper --task reconstruction
         done
     done
     exit 0
