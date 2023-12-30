@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 
 def plot_time_vs_prop(data):
@@ -180,6 +181,17 @@ def plot_total_all_vs_loss(data):
     plt.title('3D Plot: Sequential Prop, Batch Size, and Loss')
     plt.show()
 
+def plot_total_batch_vs_loss(data):
+    data = data[data['Batch Size'] == 1]
+    mean_loss_by_batch = data
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(x='Sequential Prop', y='Total Peak Memory', data=mean_loss_by_batch)
+    plt.title('Relationship between Batch Size and Test Loss')
+    plt.xlabel('Batch Size')
+    plt.ylabel('Average Test Loss')
+    plt.show()
+
+
 def main():
     # # Reading data from csv file
     # data = pd.read_csv('pselmae/data/seq_prop_fashion-mnist_performance.csv')
@@ -195,11 +207,9 @@ def main():
     # plot_peak_memory_vs_batch(data)
     # plot_loss_vs_batch(data)
 
-    data = pd.read_csv('pselmae/data/total/total_cifar100_performance.csv')
+    data = pd.read_csv('pselmae/data/total/total_cifar100_reconstruction_performance.csv')
 
-    plot_total_all_vs_peak_mem(data)
-    plot_total_all_vs_time(data)
-    plot_total_all_vs_loss(data)
+    plot_total_batch_vs_loss(data)
 
 if __name__ == '__main__':
     main()
