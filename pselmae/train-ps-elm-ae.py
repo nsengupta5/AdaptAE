@@ -70,7 +70,7 @@ import argparse
 
 # Constants
 DEFAULT_BATCH_SIZE = 10
-DEFAULT_SEQ_PROP = 0.99
+DEFAULT_SEQ_PROP = 0.95
 DEFAULT_NUM_IMAGES = 5
 result_data = []
 
