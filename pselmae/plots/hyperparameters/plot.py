@@ -2,8 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-
-
+from kneed import KneeLocator
 
 def plot_total_batch_vs_memory_sample(data):
     data = data.groupby('Batch Size').mean().reset_index()
@@ -145,17 +144,6 @@ def plot_total_batch_vs_time(datasets, names):
 
     for i, (ax, data) in enumerate(zip(axs.flatten(), datasets)):
         data = data.groupby(['Batch Size']).mean().reset_index()
-        
-        # Perform log transformation on the 'Total Training Time'
-        # Adding a small constant to avoid taking log of zero
-        data['Log Total Training Time'] = np.log(data['Total Training Time'] + 1e-5)
-
-        # Linear regression on the log-transformed data
-        coefficients = np.polyfit(data['Batch Size'], data['Log Total Training Time'], 1)
-        polynomial = np.poly1d(coefficients)
-        x_values = np.linspace(data['Batch Size'].min(), data['Batch Size'].max(), 100)
-        y_values = polynomial(x_values)
-
         sns.scatterplot(ax=ax, x='Batch Size', y='Total Training Time', data=data)
 
         ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray', alpha=0.7)
@@ -212,20 +200,20 @@ def main():
     super_tiny_imagenet_data = pd.read_csv('pselmae/data/total/total_super-tiny-imagenet_reconstruction_performance.csv')
     tiny_imagenet_data = pd.read_csv('pselmae/data/total/total_tiny-imagenet_reconstruction_performance.csv')
 
-    datasets = [cifar100_data, super_tiny_imagenet_data, tiny_imagenet_data]
-    dataset_names = ['CIFAR-100', 'Super Tiny ImageNet', 'Tiny ImageNet']
-
     # datasets = [mnist_data, fashion_mnist_data, cifar10_data, cifar100_data, super_tiny_imagenet_data, tiny_imagenet_data] 
     # dataset_names = ['MNIST', 'Fashion MNIST', 'CIFAR-10', 'CIFAR-100', 'Super Tiny ImageNet', 'Tiny ImageNet']
+
+    datasets = [mnist_data, cifar100_data, tiny_imagenet_data]
+    dataset_names = ['MNIST', 'CIFAR-100', 'Tiny ImageNet']
 
     # plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
     # plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
     # plot_total_batch_vs_memory_batch(mnist_data)
     # plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
-    # plot_total_batch_vs_time(datasets, dataset_names)
+    plot_total_batch_vs_time(datasets, dataset_names)
     # plot_total_seq_prop_vs_time(datasets, dataset_names)
     # plot_total_batch_vs_loss(datasets, dataset_names)
-    plot_total_seq_prop_vs_loss(datasets, dataset_names)
+    # plot_total_seq_prop_vs_loss(datasets, dataset_names)
 
 if __name__ == '__main__':
     main()
