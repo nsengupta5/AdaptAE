@@ -1,1 +1,3 @@
 Batch Size,Number of Epochs,Training Time,Peak Memory,Average Training Loss,Test Loss
+64,30,3799.648675441742,3100.75,0.197,0.261
+64,30,3793.753441810608,3100.75,0.215,0.3
