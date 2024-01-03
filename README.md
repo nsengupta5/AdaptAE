@@ -1,4 +1,4 @@
-## PS-ELM-AE
+## AdaptAE
 
 ### Introduction
 
@@ -26,9 +26,9 @@ To run ELM-AE:
 
 where `dataset` is one of `['mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'tiny-imagenet']`
 
-To run OS-ELM:
+To run AdaptAE:
 
-`python oselm/train-os-elm.py <mode> {batch size} <dataset>`
+`python adaptae/train-adapt-ae.py <mode> {batch size} <dataset>`
 
 where:
 

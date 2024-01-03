@@ -4,7 +4,7 @@ import numpy as np
 
 ae_data_dir = "autoencoder/data/"
 elm_ae_data_dir = "elmae/data/"
-adaptae_data_dir = "pselmae/data/total/"
+adaptae_data_dir = "adaptae/data/total/"
 
 model_dirs = {
     "AdaptAE": adaptae_data_dir,

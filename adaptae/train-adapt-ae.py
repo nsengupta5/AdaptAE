@@ -1,5 +1,5 @@
 """
-File: train-ps-elm-ae.py
+File: train-adapt-ae.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
 Last Modified: December 12, 2023
@@ -12,7 +12,7 @@ License:
     This code is released under the MIT License
 
 Usage:
-    python train-ps-elm-ae.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,
+    python train-adapt-ae.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,
                                         cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
                            [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}]
                            [--seq-prop SEQ_PROP] [--generate-imgs] [--save-results]
@@ -54,10 +54,10 @@ Usage:
       --num-images NUM_IMAGES
                             The number of images to generate. Defaults to 5 if not provided
 
-Example: python train-ps-elm-ae.py --mode sample --dataset mnist
+Example: python train-adapt-ae.py --mode sample --dataset mnist
 """
 
-from models.pselmae import PSELMAE
+from models.adaptae import AdaptAE
 from util.util import *
 from util.data import *
 import torch
@@ -75,19 +75,19 @@ DEFAULT_NUM_IMAGES = 5
 result_data = []
 
 """
-Initialize the PS-ELM-AE model
+Initialize the AdaptAE model
 :param input_nodes: The number of input nodes
 :type input_nodes: int
 :param hidden_nodes: The number of hidden nodes
 :type hidden_nodes: int
-:return: The initialized PS-ELM-AE model
-:rtype: PSELMAE
+:return: The initialized AdaptAE model
+:rtype: AdaptAE
 """
-def pselmae_init(input_nodes, hidden_nodes):
-    logging.info(f"Initializing PS-ELM-AE model...")
+def adaptae_init(input_nodes, hidden_nodes):
+    logging.info(f"Initializing AdaptAE model...")
     activation_func = 'tanh'
-    logging.info(f"Initializing PS-ELM-AE model complete.\n")
-    return PSELMAE(activation_func, input_nodes, hidden_nodes, device).to(device)
+    logging.info(f"Initializing AdaptAE model complete.\n")
+    return AdaptAE(activation_func, input_nodes, hidden_nodes, device).to(device)
 
 """
 Load and split the data
@@ -154,9 +154,9 @@ def load_and_split_data(dataset, mode, batch_size, seq_prop, task):
     return train_loader, seq_loader, test_loader, input_nodes, hidden_nodes
 
 """
-Initialize the PS-ELM-AE model with the initial training data
-:param model: The PS-ELM-AE model
-:type model: PSELMAE
+Initialize the AdaptAE model with the initial training data
+:param model: The AdaptAE model
+:type model: AdaptAE
 :param train_loader: The initial training loader
 :type train_loader: torch.utils.data.DataLoader
 :param phased: Boolean indicating if we're monitoring phased training
@@ -214,9 +214,9 @@ def train_init(model, train_loader, phased):
         logging.info(f"Initial training complete\n")
 
 """
-Train the PS-ELM-AE model sequentially on the sequential training data
-:param model: The PS-ELM-AE model
-:type model: PSELMAE
+Train the AdaptAE model sequentially on the sequential training data
+:param model: The AdaptAE model
+:type model: AdaptAE
 :param seq_loader: The sequential training loader
 :type seq_loader: torch.utils.data.DataLoader
 :param mode: The mode of sequential training, either "sample" or "batch"
@@ -286,7 +286,7 @@ def train_sequential(model, seq_loader, mode, phased):
 """
 Train the model
 :param model: The model to train
-:type model: PSELMAE
+:type model: AdaptAE
 :param train_loader: The training data loader
 :type train_loader: torch.utils.data.DataLoader
 :param seq_loader: The sequential training data loader
@@ -336,9 +336,9 @@ def train_model(model, train_loader, seq_loader, mode, phased):
     logging.info(f"Total training complete\n")
 
 """
-Test the PS-ELM-AE model on the test data
-:param model: The PS-ELM-AE model
-:type model: PSELMAE
+Test the AdaptAE model on the test data
+:param model: The AdaptAE model
+:type model: AdaptAE
 :param test_loader: The test data loader
 :type test_loader: torch.utils.data.DataLoader
 :param dataset: The dataset to test on
@@ -359,9 +359,9 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, seq_prop, task):
     batch_size = test_loader.batch_size
 
     result_parent_dir = (
-        "pselmae/results/reconstruction"
+        "adaptae/results/reconstruction"
         if task == "reconstruction"
-        else "pselmae/results/anomaly_detection"
+        else "adaptae/results/anomaly_detection"
     )
     results_file = (
         f"{result_parent_dir}/{dataset}-{task}-sample-{seq_prop}.png"
@@ -419,9 +419,9 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, seq_prop, task):
     # Plot the loss distribution for anomaly detection
     if task == "anomaly-detection":
         loss_file = (
-            f"pselmae/plots/losses/{dataset}-anomaly-losses-sample-{seq_prop}.png"
+            f"adaptae/plots/losses/{dataset}-anomaly-losses-sample-{seq_prop}.png"
             if batch_size == 1
-            else f"pselmae/plots/losses/{dataset}-anomaly-losses-batch-{batch_size}.png"
+            else f"adaptae/plots/losses/{dataset}-anomaly-losses-batch-{batch_size}.png"
         )
         plot_loss_distribution(model.name, losses, dataset, loss_file)
 
@@ -453,7 +453,7 @@ Get the arguments from the command line
 :rtype task: str
 """
 def get_args():
-    parser = argparse.ArgumentParser(description="Training a PS-ELM-AE model")
+    parser = argparse.ArgumentParser(description="Training a AdaptAE model")
     # Define the arguments
     parser.add_argument(
         "--mode",
@@ -488,7 +488,7 @@ def get_args():
         type=float,
         default=DEFAULT_SEQ_PROP,
         help=("The sequential training data proportion. Must be between 0.01 and 0.99 inclusive. "
-             "Defaults to 0.99 if not provided")
+             "Defaults to 0.97 if not provided")
     )
     parser.add_argument(
         "--generate-imgs",
@@ -604,7 +604,7 @@ def main():
         config["seq_prop"], 
         config["task"]
     )
-    model = pselmae_init(input_nodes, hidden_nodes)
+    model = adaptae_init(input_nodes, hidden_nodes)
     train_model(
         model, 
         train_loader, 
@@ -632,7 +632,7 @@ def main():
         seq_prop = config["seq_prop"]
 
         if result_strat in ["latent", "all"]:
-            latent_dir = "pselmae/plots/latents"
+            latent_dir = "adaptae/plots/latents"
             latent_file = f"{latent_dir}/{dataset}-latent_representation-{task}"
             latent_file += f"-sample-{seq_prop}.png" if mode == "sample" else f"-batch-{batch_size}.png"
             plot_latent_representation(model, test_loader, dataset, task, latent_file)
@@ -640,7 +640,7 @@ def main():
         if result_strat in ["batch-size", "all-hyper", "seq-prop", "all"]:
             target_dir = "phased" if phased else "total"
             strat = "total" if result_strat in ["all", "all-hyper"] else result_strat
-            result_file = f"pselmae/data/{target_dir}/{strat}_{dataset}_{task}_performance.csv"
+            result_file = f"adaptae/data/{target_dir}/{strat}_{dataset}_{task}_performance.csv"
             save_result_data(result_data,result_file)
 
 if __name__ == "__main__":

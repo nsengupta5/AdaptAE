@@ -21,7 +21,7 @@ def plot_total_batch_vs_memory_sample(data):
     plt.show()
 
 def plot_total_batch_vs_memory_batch(data):
-    _, axs = plt.subplots(1, 3, figsize=(10, 6))
+    _, axs = plt.subplots(2, 3, figsize=(10, 6))
 
     conditions = [(data['Sequential Prop'] < 0.45),
                   (data['Sequential Prop'] == 0.55),
@@ -72,7 +72,7 @@ def plot_total_batch_vs_loss(datasets, names):
     plt.show()
 
 def plot_total_seq_prop_vs_loss(datasets, names):
-    _, axs = plt.subplots(1, 3, figsize=(15, 5))
+    _, axs = plt.subplots(2, 3, figsize=(15, 5))
 
     for i, (ax, data) in enumerate(zip(axs.flatten(), datasets)):
         data = data.groupby('Sequential Prop').mean().reset_index()
@@ -111,7 +111,7 @@ def plot_total_seq_prop_vs_memory_batch(datasets, names):
     plt.show()
 
 def plot_total_seq_prop_vs_memory_sample(datasets, names):
-    _, axs = plt.subplots(1, 3, figsize=(15, 5))
+    _, axs = plt.subplots(2, 3, figsize=(15, 5))
 
     for i, (ax, data) in enumerate(zip(axs.flatten(), datasets)):
         data = data[data['Batch Size'] == 1]
@@ -140,7 +140,7 @@ def plot_total_seq_prop_vs_memory_sample(datasets, names):
 
 
 def plot_total_batch_vs_time(datasets, names):
-    _, axs = plt.subplots(1, 3, figsize=(20, 6))
+    _, axs = plt.subplots(2, 3, figsize=(20, 6))
 
     for i, (ax, data) in enumerate(zip(axs.flatten(), datasets)):
         data = data.groupby(['Batch Size']).mean().reset_index()
@@ -155,7 +155,7 @@ def plot_total_batch_vs_time(datasets, names):
     plt.show()
 
 def plot_total_seq_prop_vs_time(datasets, names):
-    _, axs = plt.subplots(1, 3, figsize=(20, 6))
+    _, axs = plt.subplots(2, 3, figsize=(20, 6))
 
     for i, (ax, data) in enumerate(zip(axs.flatten(), datasets)):
         batch_data = data[data['Batch Size'] != 1]
@@ -193,27 +193,24 @@ def plot_total_seq_prop_vs_time(datasets, names):
     plt.show()
 
 def main():
-    mnist_data = pd.read_csv('pselmae/data/total/total_mnist_reconstruction_performance.csv')
-    fashion_mnist_data = pd.read_csv('pselmae/data/total/total_fashion-mnist_reconstruction_performance.csv')
-    cifar10_data = pd.read_csv('pselmae/data/total/total_cifar10_reconstruction_performance.csv')
-    cifar100_data = pd.read_csv('pselmae/data/total/total_cifar100_reconstruction_performance.csv')
-    super_tiny_imagenet_data = pd.read_csv('pselmae/data/total/total_super-tiny-imagenet_reconstruction_performance.csv')
-    tiny_imagenet_data = pd.read_csv('pselmae/data/total/total_tiny-imagenet_reconstruction_performance.csv')
+    mnist_data = pd.read_csv('adaptae/data/total/total_mnist_reconstruction_performance.csv')
+    fashion_mnist_data = pd.read_csv('adaptae/data/total/total_fashion-mnist_reconstruction_performance.csv')
+    cifar10_data = pd.read_csv('adaptae/data/total/total_cifar10_reconstruction_performance.csv')
+    cifar100_data = pd.read_csv('adaptae/data/total/total_cifar100_reconstruction_performance.csv')
+    super_tiny_imagenet_data = pd.read_csv('adaptae/data/total/total_super-tiny-imagenet_reconstruction_performance.csv')
+    tiny_imagenet_data = pd.read_csv('adaptae/data/total/total_tiny-imagenet_reconstruction_performance.csv')
 
-    # datasets = [mnist_data, fashion_mnist_data, cifar10_data, cifar100_data, super_tiny_imagenet_data, tiny_imagenet_data] 
-    # dataset_names = ['MNIST', 'Fashion MNIST', 'CIFAR-10', 'CIFAR-100', 'Super Tiny ImageNet', 'Tiny ImageNet']
+    datasets = [mnist_data, fashion_mnist_data, cifar10_data, cifar100_data, super_tiny_imagenet_data, tiny_imagenet_data] 
+    dataset_names = ['MNIST', 'Fashion MNIST', 'CIFAR-10', 'CIFAR-100', 'Super Tiny ImageNet', 'Tiny ImageNet']
 
-    datasets = [mnist_data, cifar100_data, tiny_imagenet_data]
-    dataset_names = ['MNIST', 'CIFAR-100', 'Tiny ImageNet']
-
-    # plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
-    # plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
-    # plot_total_batch_vs_memory_batch(mnist_data)
-    # plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
+    plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
+    plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
+    plot_total_batch_vs_memory_batch(mnist_data)
+    plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
     plot_total_batch_vs_time(datasets, dataset_names)
-    # plot_total_seq_prop_vs_time(datasets, dataset_names)
-    # plot_total_batch_vs_loss(datasets, dataset_names)
-    # plot_total_seq_prop_vs_loss(datasets, dataset_names)
+    plot_total_seq_prop_vs_time(datasets, dataset_names)
+    plot_total_batch_vs_loss(datasets, dataset_names)
+    plot_total_seq_prop_vs_loss(datasets, dataset_names)
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,5 @@
 """
-File: pselmae.py
+File: adaptae.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
 Last Modified: December 12, 2023
@@ -18,12 +18,12 @@ from torch import nn
 import torch.nn.functional as F
 from torch.linalg import pinv
 
-class PSELMAE(nn.Module):
+class AdaptAE(nn.Module):
 
     def __init__(self, activation_func, n_input_nodes, n_hidden_nodes, device):
         super().__init__()
 
-        self.__name = "PSELMAE"
+        self.__name = "AdaptAE"
         self.__n_input_nodes = n_input_nodes
         self.__n_hidden_nodes = n_hidden_nodes
 
