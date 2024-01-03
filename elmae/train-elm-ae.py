@@ -1,12 +1,12 @@
 """
-File: train--elm-ae.py
+File: train-elm-ae.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
-Last Modified: December 12, 2023
+Last Modified: January 5, 2024
 Email: ns214@st-andrews.ac.uk
 
 Description: 
-    This file contains 
+    This file contains the implementation of the training of the ELM-AE model
 
 License:
     This code is released under the MIT License
@@ -16,7 +16,9 @@ Usage:
                            super-tiny-imagenet,tiny-imagenet} 
                            [--device {cpu,mps,cuda}] [--num-images NUM_IMAGES] 
                            [--generate-imgs] [--save-results]
-
+                           [--result-strategy {latent,all}] 
+                           --task {reconstruction,anomaly-detection}
+    Train an ELM-AE model
 
     options:
       -h, --help            show this help message and exit
@@ -31,14 +33,19 @@ Usage:
                             Defaults to 'cuda' if not provided
 
       --num-images NUM_IMAGES
-                            The number of images to generate. 
-                            Defaults to 5 if not provided
+                            The number of images to generate. Defaults to 5 if not provided
 
       --generate-imgs       Whether to generate images of the reconstructions
 
       --save-results        Whether to save the results to a CSV file
 
-Example: python train-elm-ae.py --dataset cifar10 
+      --result-strategy {latent,all}
+                            If saving results, the independent variable to vary when saving results
+
+      --task {reconstruction,anomaly-detection}
+                            The task to perform (either 'reconstruction' or 'anomaly-detection')
+
+    Example: python train-elm-ae.py --dataset cifar10 --task anomaly-detection
 """
 
 from models.elmae import ELMAE

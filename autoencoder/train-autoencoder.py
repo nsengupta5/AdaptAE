@@ -2,21 +2,23 @@
 File: train-autoencoder.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
-Last Modified: December 12, 2023
+Last Modified: January 5, 2024
 Email: ns214@st-andrews.ac.uk
 
 Description: 
-    This file contains 
+    This file contains the implementation of the training of the autoencoder model
 
 License:
     This code is released under the MIT License
 
 Usage:
-    python train-autoencoder.py [-h] --dataset {mnist,fashion-mnist,cifar10,
-                                cifar100,super-tiny-imagenet,tiny-imagenet} 
+    python train-autoencoder.py [-h] --dataset {mnist,fashion-mnist,cifar10,cifar100,
+                                super-tiny-imagenet,tiny-imagenet} 
                                 [--device {cpu,mps,cuda}] [--generate-imgs] 
-                                [--save-results] [--num-images NUM_IMAGES] 
-                                [--num-epochs NUM_EPOCHS] [--batch-size BATCH_SIZE]
+                                [--save-results] [--num-images NUM_IMAGES]
+                                [--num-epochs NUM_EPOCHS] [--batch-size BATCH_SIZE] 
+                                [--result-strategy {batch-size,num-epochs,all-hyper,latent,all}] 
+                                --task {reconstruction,anomaly-detection}
 
     Train an autoencoder model
 
@@ -25,8 +27,8 @@ Usage:
 
       --dataset {mnist,fashion-mnist,cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
                             The dataset to use 
-                            (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100', 
-                            'super-tiny-imagenet' or 'tiny-imagenet')
+                            (either 'mnist', 'fashion-mnist', 'cifar10', 
+                            'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')
 
       --device {cpu,mps,cuda}
                             The device to use (either 'cpu', 'mps' or 'cuda'). 
@@ -48,7 +50,13 @@ Usage:
                             The batch size to use. 
                             Defaults to 64 if not provided
 
-Example: python train-autoencoder.py --dataset mnist --num-epochs 50
+      --result-strategy {batch-size,num-epochs,all-hyper,latent,all}
+                            If saving results, the independent variable to vary when saving results
+
+      --task {reconstruction,anomaly-detection}
+                            The task to perform (either 'reconstruction' or 'anomaly-detection')
+
+Example: python train-autoencoder.py --dataset mnist --num-epochs 50 --task reconstruction
 """
 
 from models.autoencoder import Autoencoder

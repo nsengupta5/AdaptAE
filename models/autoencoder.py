@@ -2,12 +2,11 @@
 File: autoencoder.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
-Last Modified: December 12, 2023
+Last Modified: January 5, 2024
 Email: ns214@st-andrews.ac.uk
 
 Description: 
-    This file contains my implementation of an autoencoder with a single hidden 
-    layer.
+    This file contains the implementation of a vanilla autoencoder.
 
 License:
     This code is released under the MIT License

@@ -2,44 +2,49 @@
 File: train-adapt-ae.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
-Last Modified: December 12, 2023
+Last Modified: January 5, 2024
 Email: ns214@st-andrews.ac.uk
 
 Description:
-    This file contains
+    This file contains the implementation of the training of the AdaptAE model
 
 License:
     This code is released under the MIT License
 
 Usage:
-    python train-adapt-ae.py [-h] --mode {sample,batch} --dataset {mnist,fashion-mnist,
-                                        cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
-                           [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}]
-                           [--seq-prop SEQ_PROP] [--generate-imgs] [--save-results]
-                           [--phased] [--result-strategy {batch-size,seq-prop,total}]
-                           [--num-images NUM_IMAGES]
+    python train-adapt-ae.py [-h] [--mode {sample,batch}] 
+                             --dataset {mnist,fashion-mnist,cifar10,
+                             cifar100,super-tiny-imagenet,tiny-imagenet} 
+                             [--batch-size BATCH_SIZE] [--device {cpu,mps,cuda}]
+                             [--seq-prop SEQ_PROP] [--generate-imgs] 
+                             [--save-results] [--phased] 
+                             [--result-strategy {batch-size,seq-prop,
+                             all-hyper,latent,all}] [--num-images NUM_IMAGES] 
+                             --task {reconstruction,anomaly-detection}
+
+    Training a AdaptAE model
 
     options:
-      -h, --help            show the help message and exit
+      -h, --help            show this help message and exit
 
       --mode {sample,batch}
                             The mode of sequential training (either 'sample' or 'batch')
 
       --dataset {mnist,fashion-mnist,cifar10,cifar100,super-tiny-imagenet,tiny-imagenet}
-                            The dataset to use
-                            (either 'mnist', 'fashion-mnist', 'cifar10', 'cifar100',
-                             'super-tiny-imagenet' or 'tiny-imagenet')
+                            The dataset to use (either 'mnist', 'fashion-mnist', 
+                            'cifar10', 'cifar100', 'super-tiny-imagenet' or 'tiny-imagenet')
 
       --batch-size BATCH_SIZE
-                            The batch size to use. Defaults to 10 if not provided
+                            The batch size to use. 
+                            Defaults to 10 if not provided
 
       --device {cpu,mps,cuda}
-                            The device to use (either 'cpu', 'mps' or 'cuda').
+                            The device to use (either 'cpu', 'mps' or 'cuda'). 
                             Defaults to 'cuda' if not provided
 
-      --seq-prop SEQ_PROP   The sequential training data proportion.
-                            Must be between 0.01 and 0.99 inclusive.
-                            Defaults to 0.99 if not provided
+      --seq-prop SEQ_PROP   The sequential training data proportion. 
+                            Must be between 0.01 and 0.99 inclusive. 
+                            Defaults to 0.97 if not provided
 
       --generate-imgs       Whether to generate images of the reconstructions
 
@@ -47,14 +52,16 @@ Usage:
 
       --phased              Whether to monitor and save phased or total performance results
 
-      --result-strategy {batch-size,seq-prop,total}
-                            If saving results, the independent variable to vary when
-                            saving results
+      --result-strategy {batch-size,seq-prop,all-hyper,latent,all}
+                            If saving results, the independent variable to vary when saving results
 
       --num-images NUM_IMAGES
                             The number of images to generate. Defaults to 5 if not provided
 
-Example: python train-adapt-ae.py --mode sample --dataset mnist
+      --task {reconstruction,anomaly-detection}
+                            The task to perform (either 'reconstruction' or 'anomaly-detection')
+
+Example: python train-adapt-ae.py --mode sample --dataset mnist --task reconstruction
 """
 
 from models.adaptae import AdaptAE
@@ -70,7 +77,7 @@ import argparse
 
 # Constants
 DEFAULT_BATCH_SIZE = 10
-DEFAULT_SEQ_PROP = 0.95
+DEFAULT_SEQ_PROP = 0.97
 DEFAULT_NUM_IMAGES = 5
 result_data = []
 

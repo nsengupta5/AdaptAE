@@ -2,11 +2,11 @@
 File: elmae.py
 Author: Nikhil Sengupta
 Created on: November 6, 2023
-Last Modified: December 12, 2023
+Last Modified: January 5, 2024
 Email: ns214@st-andrews.ac.uk
 
 Description: 
-    This file contains 
+    This file contains the implementation of the ELMAE model
 
 License:
     This code is released under the MIT License

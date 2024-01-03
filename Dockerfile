@@ -10,4 +10,7 @@ COPY . .
 # Install any needed packages specified in requirements.txt
 RUN conda env create -f environment.yml -n adaptae
 
+RUN conda config --set auto_activate_base false
+
 ENV PYTHONPATH="./:$PYTHONPATH"
+
