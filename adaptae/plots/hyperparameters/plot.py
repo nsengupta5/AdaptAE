@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from kneed import KneeLocator
 
 def plot_total_batch_vs_memory_sample(data):
     data = data.groupby('Batch Size').mean().reset_index()

@@ -103,6 +103,8 @@ Load and split the data
 :type task: str
 :return train_loader: The training data loader
 :rtype train_loader: torch.utils.data.DataLoader
+:return valid_loader: The validation data loader
+:rtype valid_loader: torch.utils.data.DataLoader
 :return test_loader: The test data loader
 :rtype test_loader: torch.utils.data.DataLoader
 :return input_nodes: The number of input nodes
@@ -278,6 +280,17 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
 
     logging.info(f"Testing complete.")
 
+"""
+Find the best parameters for the autoencoder model using GridSearchCV
+:param input_nodes: The number of input nodes
+:type input_nodes: int
+:param hidden_nodes: The number of hidden nodes
+:type hidden_nodes: int
+:param valid_loader: The validation data loader
+:type valid_loader: torch.utils.data.DataLoader
+:returns: The best learning rate and weight decay
+:rtype: float, float
+"""
 def find_best_params(input_nodes, hidden_nodes, valid_loader):
     all_features = []
     for batch_features, _ in valid_loader:
@@ -445,12 +458,15 @@ def main():
                 result_data.append(config["batch_size"])
                 result_data.append(config["num_epochs"])
 
+    # Load the data
     train_loader, valid_loader, test_loader, input_nodes, hidden_nodes = load_and_split_data(
         config["dataset"], 
         config["batch_size"],
         config["task"]
     )
+
     model = autoencoder_init(input_nodes, hidden_nodes)
+
     train_model(model, train_loader, valid_loader, config["num_epochs"])
     test_model(
         model, 
@@ -467,6 +483,7 @@ def main():
         task = config["task"]
 
         if result_strat in ["latent", "all"]:
+            # Plot the latent representation
             plot_latent_representation(
                 model, 
                 test_loader, 
@@ -475,6 +492,7 @@ def main():
                 f"autoencoder/plots/latents/{dataset}-latent-representation-{task}.png",
             )
         if result_strat in ["all-hyper", "all"]:
+            # Plot the hyperparameter performance
             strat = "total" if result_strat in ["all", "all-hyper"] else result_strat
             save_result_data(
                 result_data,

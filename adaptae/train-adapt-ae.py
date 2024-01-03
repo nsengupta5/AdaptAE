@@ -639,12 +639,14 @@ def main():
         seq_prop = config["seq_prop"]
 
         if result_strat in ["latent", "all"]:
+            # Plot the latent representation
             latent_dir = "adaptae/plots/latents"
             latent_file = f"{latent_dir}/{dataset}-latent_representation-{task}"
             latent_file += f"-sample-{seq_prop}.png" if mode == "sample" else f"-batch-{batch_size}.png"
             plot_latent_representation(model, test_loader, dataset, task, latent_file)
 
         if result_strat in ["batch-size", "all-hyper", "seq-prop", "all"]:
+            # Plot the hyperparameter performance
             target_dir = "phased" if phased else "total"
             strat = "total" if result_strat in ["all", "all-hyper"] else result_strat
             result_file = f"adaptae/data/{target_dir}/{strat}_{dataset}_{task}_performance.csv"

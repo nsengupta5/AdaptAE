@@ -157,6 +157,13 @@ def check_tiny_imagenet():
         os.system('rm tiny-imagenet-200.zip')
         os.system('mv tiny-imagenet-200 ./data')
 
+"""
+Add noise to the image
+:param img: The image to add noise to
+:type img: numpy.ndarray
+:return noisy_img: The noisy image
+:rtype noisy_img: numpy.ndarray
+"""
 def add_noise(img):
     mean = 0.0
     std = 0.1
@@ -165,6 +172,7 @@ def add_noise(img):
     noisy_img = img + gauss
     return np.clip(noisy_img, 0, 1)
 
+# Dataloader class for adding noise to the images
 class NoisyLoader(torch.utils.data.Dataset):
     def __init__(self, dataset):
         super(NoisyLoader, self).__init__()

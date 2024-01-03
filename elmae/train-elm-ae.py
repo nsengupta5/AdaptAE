@@ -317,7 +317,6 @@ def main():
     model = elmae_init(input_nodes, hidden_nodes)
 
     train_model(model, train_loader)
-
     test_model(
         model, 
         test_loader, 
@@ -333,6 +332,7 @@ def main():
         task = config["task"]
 
         if result_strat in ["latent", "all"]:
+            # Save the latent representation
             plot_latent_representation(
                 model,
                 test_loader,
@@ -341,6 +341,7 @@ def main():
                 f"elmae/plots/latents/{dataset}-latent-representation-{task}.png"
             )
         if result_strat == "all":
+            # Save the hyperparameter performance
             result_file=f"elmae/data/{dataset}_{task}_performance.csv"
             save_result_data(
                 result_data,

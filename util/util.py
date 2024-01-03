@@ -137,6 +137,17 @@ def plot_latent_representation(model, loader, dataset, task, results_file):
     plt.legend()
     plt.savefig(results_file)
 
+"""
+Plot the loss distribution of the model
+:param model_name: The name of the model
+:type model_name: str
+:param losses: The losses to plot
+:type losses: list
+:param dataset: The dataset used
+:type dataset: str
+:param results_file: The file to save the results to
+:type results_file: str
+"""
 def plot_loss_distribution(model_name, losses, dataset, results_file):
     dataset_names = {
         "mnist": "MNIST",
