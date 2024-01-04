@@ -317,7 +317,7 @@ def find_best_params(input_nodes, hidden_nodes, valid_loader):
     )
 
     param_grid = {
-        'lr': [1e-1, 1e-2, 1e-4],
+        'lr': [1e-1, 1e-2, 1e-3],
         'optimizer__weight_decay': [1e-3, 1e-4, 1e-5]
     }
 

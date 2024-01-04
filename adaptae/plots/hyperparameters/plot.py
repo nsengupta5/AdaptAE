@@ -65,7 +65,7 @@ def plot_total_batch_vs_loss(datasets, names):
         ax.set_ylabel('Loss')
 
         # Set the caption using the `set_title` method or `text` method
-        ax.set_title(names[i], fontsize=10)  # This will be the title
+        ax.set_title(names[i], fontsize=13)  # This will be the title
 
     plt.tight_layout()
     plt.show()
@@ -82,7 +82,7 @@ def plot_total_seq_prop_vs_loss(datasets, names):
         ax.set_ylabel('Loss')
 
         # Set the caption using the `set_title` method or `text` method
-        ax.set_title(names[i], fontsize=10)  # This will be the title
+        ax.set_title(names[i], fontsize=13)  # This will be the title
 
     plt.tight_layout()
     plt.show()
@@ -104,7 +104,7 @@ def plot_total_seq_prop_vs_memory_batch(datasets, names):
         ax.legend()
         
         # Set the caption using the `set_title` method or `text` method
-        ax.set_title(names[i], fontsize=10)  # This will be the title
+        ax.set_title(names[i], fontsize=13)  # This will be the title
 
     plt.tight_layout()
     plt.show()
@@ -129,10 +129,10 @@ def plot_total_seq_prop_vs_memory_sample(datasets, names):
         ax.set_ylabel('Peak Memory Usage (MB)')
 
         # Set the caption using the `set_title` method or `text` method
-        ax.set_title(names[i], fontsize=10)  # This will be the title
+        ax.set_title(names[i], fontsize=13)  # This will be the title
 
         equation_text = f'y = {m:.0f}x + {b:.0f}'
-        ax.text(0.65, 0.9, equation_text, transform=ax.transAxes, fontsize=10, color='black')
+        ax.text(0.65, 0.9, equation_text, transform=ax.transAxes, fontsize=13, color='black')
 
     plt.tight_layout()
     plt.show()
@@ -148,7 +148,7 @@ def plot_total_batch_vs_time(datasets, names):
         ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray', alpha=0.7)
         ax.set_xlabel('Batch Size')
         ax.set_ylabel('Total Training Time (s)')
-        ax.set_title(names[i], fontsize=10)  # This will be the title
+        ax.set_title(names[i], fontsize=13)  # This will be the title
 
     plt.tight_layout()
     plt.show()
@@ -180,12 +180,12 @@ def plot_total_seq_prop_vs_time(datasets, names):
         ax.set_xlabel('Sequential Proportion')
         ax.set_ylabel('Total Training Time (s)')
         ax.legend()
-        ax.set_title(names[i], fontsize=10)  # This will be the title
+        ax.set_title(names[i], fontsize=13)  # This will be the title
 
         sample_equation_text = f'y = {m_s:.0f}x + {b_s:.0f}'
-        ax.text(0.65, 0.9, sample_equation_text, transform=ax.transAxes, fontsize=10, color='black')
+        ax.text(0.65, 0.9, sample_equation_text, transform=ax.transAxes, fontsize=13, color='black')
         batch_equation_text = f'y = {m_b:.0f}x + {b_b:.0f}'
-        ax.text(0.65, 0.2, batch_equation_text, transform=ax.transAxes, fontsize=10, color='black')
+        ax.text(0.65, 0.2, batch_equation_text, transform=ax.transAxes, fontsize=13, color='black')
 
 
     plt.tight_layout()
@@ -205,10 +205,10 @@ def main():
     # plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
     # plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
     # plot_total_batch_vs_memory_batch(mnist_data)
-    # plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
+    plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
     # plot_total_batch_vs_time(datasets, dataset_names)
     # plot_total_seq_prop_vs_time(datasets, dataset_names)
-    plot_total_batch_vs_loss(datasets, dataset_names)
+    # plot_total_batch_vs_loss(datasets, dataset_names)
     # plot_total_seq_prop_vs_loss(datasets, dataset_names)
 
 if __name__ == '__main__':

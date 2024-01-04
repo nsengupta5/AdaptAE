@@ -167,7 +167,7 @@ Add noise to the image
 def add_noise(img):
     mean = 0.0
     std = 0.1
-    sigma = std**0.4
+    sigma = std**0.1
     gauss = np.random.normal(mean, sigma, img.shape)
     noisy_img = img + gauss
     return np.clip(noisy_img, 0, 1)

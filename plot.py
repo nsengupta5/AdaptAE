@@ -17,14 +17,14 @@ colors = ['red', 'blue', 'purple']
 # Paths to your CSV files
 datasets = {
     "MNIST": "total_mnist_reconstruction_performance.csv",
-    "Fashion-MNIST": "total_fashion-mnist_reconstruction_performance.csv",
-    "CIFAR10": "total_cifar10_reconstruction_performance.csv",
+    # "Fashion-MNIST": "total_fashion-mnist_reconstruction_performance.csv",
+    # "CIFAR10": "total_cifar10_reconstruction_performance.csv",
     "CIFAR100": "total_cifar100_reconstruction_performance.csv",
     "Super Tiny-ImageNet": "total_super-tiny-imagenet_reconstruction_performance.csv",
     "Tiny-ImageNet": "total_tiny-imagenet_reconstruction_performance.csv"
 }
 
-bar_width = 0.3
+bar_width = 0.4
 n_groups = len(datasets)
 dataset_spacing = 0.1  # Space between groups of bars
 group_width = len(model_dirs) * bar_width + dataset_spacing
@@ -42,11 +42,12 @@ for dataset_name, dataset_path in datasets.items():
             df = df[df['Batch Size'] == 1]  
             df = df[df['Sequential Prop'] == 0.97]
 
-        average_memory_usage = df['Total Training Time'].mean()
-        memory_usage[model].append(df['Total Training Time'].mean())
+        average_memory_usage = df['Total Peak Memory'].mean()
+        memory_usage[model].append(df['Total Peak Memory'].mean())
 
 # Plotting the bar chart
-plt.figure(figsize=(12, 6))
+plt.rcParams.update({'font.size': 16})
+plt.figure(figsize=(14, 8))
 
 for i, model in enumerate(model_dirs):
     bars = plt.bar(index + i * bar_width, memory_usage[model], bar_width, label=model, color=colors[i])
@@ -55,6 +56,7 @@ for i, model in enumerate(model_dirs):
         # Apply a pattern like a cross hatch to indicate it didn't run.
         bars[-1].set_hatch('x')  # The last bar in the ELM-AE group corresponds to Tiny ImageNet
         bars[-1].set_edgecolor('red')  # Optional: Set the edge color to make it stand out.
+        bars[-1].set_linewidth(2)  # Optional: Set the edge width to make it stand out.
 
     for bar in bars:
         height = bar.get_height()
@@ -62,7 +64,7 @@ for i, model in enumerate(model_dirs):
             plt.text(bar.get_x() + bar.get_width() / 2, height, f'{height:.2f}', 
                      ha='center', va='bottom')
 
-plt.ylabel('Average Training Time (s)')
+plt.ylabel('Average Peak Memory Usage (MB)')
 plt.xticks(index + bar_width, datasets.keys(), rotation=45)
 # Add grid lines for better readability, only for the y-axis
 plt.grid(axis='y', linestyle='--', alpha=0.7)
