@@ -430,7 +430,12 @@ def test_model(model, test_loader, dataset, gen_imgs, num_imgs, seq_prop, task):
             if batch_size == 1
             else f"adaptae/plots/losses/{dataset}-anomaly-losses-batch-{batch_size}.png"
         )
-        plot_loss_distribution(model.name, losses, dataset, loss_file)
+        confusion_file = (
+            f"adaptae/plots/confusion/{dataset}-anomaly-confusion-sample-{seq_prop}.png"
+            if batch_size == 1
+            else f"adaptae/plots/confusion/{dataset}-anomaly-confusion-batch-{batch_size}.png"
+        )
+        plot_loss_distribution(model.name, losses, dataset, batch_size, loss_file, confusion_file)
 
     logging.info(f"Testing complete.")
 

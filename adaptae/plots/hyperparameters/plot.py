@@ -202,14 +202,14 @@ def main():
     datasets = [mnist_data, fashion_mnist_data, cifar10_data, cifar100_data, super_tiny_imagenet_data, tiny_imagenet_data] 
     dataset_names = ['MNIST', 'Fashion MNIST', 'CIFAR-10', 'CIFAR-100', 'Super Tiny ImageNet', 'Tiny ImageNet']
 
-    plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
-    plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
-    plot_total_batch_vs_memory_batch(mnist_data)
-    plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
-    plot_total_batch_vs_time(datasets, dataset_names)
-    plot_total_seq_prop_vs_time(datasets, dataset_names)
+    # plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
+    # plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
+    # plot_total_batch_vs_memory_batch(mnist_data)
+    # plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
+    # plot_total_batch_vs_time(datasets, dataset_names)
+    # plot_total_seq_prop_vs_time(datasets, dataset_names)
     plot_total_batch_vs_loss(datasets, dataset_names)
-    plot_total_seq_prop_vs_loss(datasets, dataset_names)
+    # plot_total_seq_prop_vs_loss(datasets, dataset_names)
 
 if __name__ == '__main__':
     main()

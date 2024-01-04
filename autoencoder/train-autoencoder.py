@@ -235,7 +235,7 @@ Test the autoencoder model
 :param task: The task to perform
 :type task: str
 """
-def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
+def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task, batch_size):
     logging.info(f"Testing the autoencoder model...")
 
     # Set the model to evaluation mode
@@ -276,7 +276,8 @@ def test_model(model, data_loader, dataset, gen_imgs, num_imgs, task):
 
     if task == "anomaly-detection":
         loss_file = f"autoencoder/plots/losses/{dataset}-anomaly-losses.png"
-        plot_loss_distribution(model.name, losses, dataset, loss_file)
+        confusion_file = f"autoencoder/plots/confusion/{dataset}-confusion-matrix.png"
+        plot_loss_distribution(model.name, losses, dataset, batch_size, loss_file, confusion_file)
 
     logging.info(f"Testing complete.")
 
@@ -474,7 +475,8 @@ def main():
         config["dataset"], 
         config["generate_imgs"], 
         config["num_images"], 
-        config["task"]
+        config["task"],
+        config["batch_size"]
     )
 
     if config["save_results"]:

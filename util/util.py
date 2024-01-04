@@ -19,6 +19,7 @@ import numpy as np
 import seaborn as sns
 from torch import nn
 from sklearn.manifold import TSNE
+from sklearn.metrics import confusion_matrix
 import csv
 
 """
@@ -148,7 +149,7 @@ Plot the loss distribution of the model
 :param results_file: The file to save the results to
 :type results_file: str
 """
-def plot_loss_distribution(model_name, losses, dataset, results_file):
+def plot_loss_distribution(model_name, losses, dataset, batch_size, loss_file, confusion_file):
     dataset_names = {
         "mnist": "MNIST",
         "fashion-mnist": "Fashion-MNIST",
@@ -158,12 +159,77 @@ def plot_loss_distribution(model_name, losses, dataset, results_file):
         "tiny-imagenet": "Tiny ImageNet"
     }
 
-    plt.figure(figsize=(10, 6))
+    split_point = 1472 // batch_size
+
+    # Splitting the losses into anomalies and normal
+    anomaly_losses = np.array(losses[:split_point])
+    normal_losses = np.array(losses[split_point:])
+
+    mean_normal_losses = np.mean(normal_losses)
+    std_normal_losses = np.std(normal_losses)
+    std_dev_threshold = mean_normal_losses + (3 * std_normal_losses)
+
+    fig, _ = plt.subplots(figsize=(10, 6))
     plt.title(f"{model_name} Loss Distribution of Partially Noisy {dataset_names[dataset]} Test Dataset")
-    sns.distplot(losses, bins=100, kde=False, color="blue")
+
+    # Plotting both distributions
+    sns.distplot(anomaly_losses, bins=50, kde=False, color="red", label="Anomalies")
+    sns.distplot(normal_losses, bins=50, kde=False, color="blue", label="Normal Data")
+
+    plt.axvline(x=std_dev_threshold, color='green', linestyle='--', label=f'3-std threshold')
+
     plt.xlabel("Test Loss")
-    plt.ylabel("Number of Images")
-    plt.savefig(results_file)
+    plt.ylabel("Number of Batches")
+    plt.legend()
+    plt.savefig(loss_file)
+
+    plt.close(fig)
+    plot_confusion_matrix(
+        model_name,
+        losses,
+        std_dev_threshold,
+        dataset_names,
+        dataset,
+        split_point,
+        confusion_file
+    )
+
+"""
+Plot the confusion matrix of the model
+:param model_name: The name of the model
+:type model_name: str
+:param losses: The losses to plot
+:type losses: list
+:param threshold: The threshold to use
+:type threshold: float
+:param dataset_names: The names of the datasets
+:type dataset_names: dict
+:param dataset: The dataset used
+:type dataset: str
+:param split_point: The point at which the anomalies start
+:type split_point: int
+:param confusion_file: The file to save the results to
+:type confusion_file: str
+"""
+def plot_confusion_matrix(model_name, losses, threshold, dataset_names, dataset, split_point, confusion_file):
+    # Assuming the first 1500 are anomalies and the rest are normal
+    true_labels = np.array([1] * split_point + [0] * (len(losses) - split_point))
+    
+    # Predictions based on the threshold
+    predictions = (np.array(losses) > threshold).astype(int)
+
+    # Calculate confusion matrix
+    conf_matrix = confusion_matrix(true_labels, predictions)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues',
+                xticklabels=['Normal', 'Anomaly'],
+                yticklabels=['Normal', 'Anomaly'])
+
+    plt.ylabel('Actual')
+    plt.xlabel('Predicted')
+    plt.title(f"Confusion Matrix for {model_name} on {dataset_names[dataset]}")
+    plt.savefig(confusion_file)
 
 """
 Save the results to a CSV file
