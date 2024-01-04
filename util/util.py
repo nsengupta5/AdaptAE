@@ -159,7 +159,7 @@ def plot_loss_distribution(model_name, losses, dataset, batch_size, loss_file, c
         "tiny-imagenet": "Tiny ImageNet"
     }
 
-    split_point = 1472 // batch_size
+    split_point = 1500 // batch_size
 
     # Splitting the losses into anomalies and normal
     anomaly_losses = np.array(losses[:split_point])

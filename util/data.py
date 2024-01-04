@@ -177,7 +177,7 @@ class NoisyLoader(torch.utils.data.Dataset):
     def __init__(self, dataset):
         super(NoisyLoader, self).__init__()
         self.dataset = dataset
-        self.num_noisy_imgs = 1472
+        self.num_noisy_imgs = 1500
 
     def __len__(self):
         return len(self.dataset)
