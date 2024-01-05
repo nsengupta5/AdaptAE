@@ -221,7 +221,7 @@ def plot_confusion_matrix(model_name, losses, threshold, dataset_names, dataset,
     # Calculate confusion matrix
     conf_matrix = confusion_matrix(true_labels, predictions)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    plt.subplots(figsize=(8, 6))
     sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues',
                 xticklabels=['Normal', 'Anomaly'],
                 yticklabels=['Normal', 'Anomaly'])

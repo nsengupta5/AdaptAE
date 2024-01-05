@@ -60,12 +60,19 @@ def plot_total_batch_vs_loss(datasets, names):
         data = data.groupby('Batch Size').mean().reset_index()
         sns.scatterplot(ax=ax, x='Batch Size', y='Test Loss', data=data)
 
+        # Calculate the Pearson correlation coefficient
+        correlation_coefficient = np.corrcoef(data['Batch Size'], data['Test Loss'])[0, 1]
+
         ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray', alpha=0.7)
         ax.set_xlabel('Batch Size')
         ax.set_ylabel('Loss')
 
         # Set the caption using the `set_title` method or `text` method
         ax.set_title(names[i], fontsize=13)  # This will be the title
+
+        # Place the text on the subplot
+        ax.text(0.80, 0.95, f'r = {correlation_coefficient:.2f}', transform=ax.transAxes, 
+                fontsize=12, verticalalignment='top')
 
     plt.tight_layout()
     plt.show()
@@ -110,7 +117,7 @@ def plot_total_seq_prop_vs_memory_batch(datasets, names):
     plt.show()
 
 def plot_total_seq_prop_vs_memory_sample(datasets, names):
-    _, axs = plt.subplots(2, 3, figsize=(15, 5))
+    _, axs = plt.subplots(1, 3, figsize=(15, 5))
 
     for i, (ax, data) in enumerate(zip(axs.flatten(), datasets)):
         data = data[data['Batch Size'] == 1]
@@ -132,7 +139,7 @@ def plot_total_seq_prop_vs_memory_sample(datasets, names):
         ax.set_title(names[i], fontsize=13)  # This will be the title
 
         equation_text = f'y = {m:.0f}x + {b:.0f}'
-        ax.text(0.65, 0.9, equation_text, transform=ax.transAxes, fontsize=13, color='black')
+        ax.text(0.55, 0.9, equation_text, transform=ax.transAxes, fontsize=13, color='black')
 
     plt.tight_layout()
     plt.show()
@@ -154,7 +161,7 @@ def plot_total_batch_vs_time(datasets, names):
     plt.show()
 
 def plot_total_seq_prop_vs_time(datasets, names):
-    _, axs = plt.subplots(2, 3, figsize=(20, 6))
+    _, axs = plt.subplots(1, 3, figsize=(20, 6))
 
     for i, (ax, data) in enumerate(zip(axs.flatten(), datasets)):
         batch_data = data[data['Batch Size'] != 1]
@@ -202,14 +209,14 @@ def main():
     datasets = [mnist_data, fashion_mnist_data, cifar10_data, cifar100_data, super_tiny_imagenet_data, tiny_imagenet_data] 
     dataset_names = ['MNIST', 'Fashion MNIST', 'CIFAR-10', 'CIFAR-100', 'Super Tiny ImageNet', 'Tiny ImageNet']
 
-    # plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
-    # plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
-    # plot_total_batch_vs_memory_batch(mnist_data)
+    plot_total_seq_prop_vs_memory_batch(datasets, dataset_names)
+    plot_total_seq_prop_vs_memory_sample(datasets, dataset_names)
+    plot_total_batch_vs_memory_batch(mnist_data)
     plot_total_batch_vs_memory_sample(super_tiny_imagenet_data)
-    # plot_total_batch_vs_time(datasets, dataset_names)
-    # plot_total_seq_prop_vs_time(datasets, dataset_names)
-    # plot_total_batch_vs_loss(datasets, dataset_names)
-    # plot_total_seq_prop_vs_loss(datasets, dataset_names)
+    plot_total_batch_vs_time(datasets, dataset_names)
+    plot_total_seq_prop_vs_time(datasets, dataset_names)
+    plot_total_batch_vs_loss(datasets, dataset_names)
+    plot_total_seq_prop_vs_loss(datasets, dataset_names)
 
 if __name__ == '__main__':
     main()

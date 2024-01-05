@@ -17,8 +17,8 @@ colors = ['red', 'blue', 'purple']
 # Paths to your CSV files
 datasets = {
     "MNIST": "total_mnist_reconstruction_performance.csv",
-    # "Fashion-MNIST": "total_fashion-mnist_reconstruction_performance.csv",
-    # "CIFAR10": "total_cifar10_reconstruction_performance.csv",
+    "Fashion-MNIST": "total_fashion-mnist_reconstruction_performance.csv",
+    "CIFAR10": "total_cifar10_reconstruction_performance.csv",
     "CIFAR100": "total_cifar100_reconstruction_performance.csv",
     "Super Tiny-ImageNet": "total_super-tiny-imagenet_reconstruction_performance.csv",
     "Tiny-ImageNet": "total_tiny-imagenet_reconstruction_performance.csv"
